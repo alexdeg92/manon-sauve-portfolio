@@ -23,28 +23,40 @@ export default function ContactModal({ painting, isOpen, onClose }: ContactModal
     ? `Bonjour Manon,\n\nJe suis intéressé(e) par votre œuvre « ${painting.title} » (${painting.price} $ CAD).\n\nMerci de me contacter pour plus d'informations.`
     : "";
 
+  const [error, setError] = useState(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Placeholder: POST to Formspree or similar
+    setError(false);
     try {
-      await fetch("https://formspree.io/f/YOUR_FORM_ID", {
+      const res = await fetch("https://formsubmit.co/ajax/manonsauve1965@gmail.com", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({
-          ...formData,
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone || "Non fourni",
           message: formData.message || defaultMessage,
-          painting: painting?.title,
+          _subject: painting
+            ? `Demande: ${painting.title}`
+            : "Nouveau message depuis votre site",
+          painting: painting?.title || "Aucune",
         }),
       });
+      const data = await res.json();
+      if (data.success === "true") {
+        setSubmitted(true);
+        setTimeout(() => {
+          setSubmitted(false);
+          onClose();
+          setFormData({ name: "", email: "", phone: "", message: "" });
+        }, 2500);
+      } else {
+        setError(true);
+      }
     } catch {
-      // silently handle — placeholder endpoint
+      setError(true);
     }
-    setSubmitted(true);
-    setTimeout(() => {
-      setSubmitted(false);
-      onClose();
-      setFormData({ name: "", email: "", phone: "", message: "" });
-    }, 2500);
   };
 
   return (
@@ -147,6 +159,11 @@ export default function ContactModal({ painting, isOpen, onClose }: ContactModal
                   >
                     Envoyer
                   </button>
+                  {error && (
+                    <p className="text-red-600 text-sm text-center mt-3">
+                      Une erreur est survenue. Veuillez réessayer.
+                    </p>
+                  )}
                 </form>
               </>
             )}
