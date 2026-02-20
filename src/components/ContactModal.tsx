@@ -29,7 +29,7 @@ export default function ContactModal({ painting, isOpen, onClose }: ContactModal
     e.preventDefault();
     setError(false);
     try {
-      const res = await fetch("https://formsubmit.co/ajax/manonsauve1965@gmail.com", {
+      const res = await fetch("https://formsubmit.co/ajax/manonsauve65@hotmail.com", {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({

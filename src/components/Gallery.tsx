@@ -2,13 +2,14 @@
 
 import { motion } from "framer-motion";
 import Image from "next/image";
-import { paintings, Painting } from "@/data/paintings";
+import { Painting } from "@/data/paintings";
 
 interface GalleryProps {
+  paintings: Painting[];
   onSelect: (painting: Painting) => void;
 }
 
-export default function Gallery({ onSelect }: GalleryProps) {
+export default function Gallery({ paintings, onSelect }: GalleryProps) {
   return (
     <section id="galerie" className="py-28 md:py-36 bg-cream">
       <div className="max-w-7xl mx-auto px-6">
@@ -41,6 +42,7 @@ export default function Gallery({ onSelect }: GalleryProps) {
                   fill
                   className="object-cover transition-transform duration-700 group-hover:scale-105"
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                  unoptimized={painting.image.startsWith("http")}
                 />
                 {/* Hover overlay */}
                 <div className="absolute inset-0 bg-charcoal/0 group-hover:bg-charcoal/20 transition-all duration-500 flex items-end">
