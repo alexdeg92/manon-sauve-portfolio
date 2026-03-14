@@ -20,7 +20,9 @@ export default function ContactModal({ painting, isOpen, onClose }: ContactModal
   const [submitted, setSubmitted] = useState(false);
 
   const defaultMessage = painting
-    ? `Bonjour Manon,\n\nJe suis intéressé(e) par votre œuvre « ${painting.title} » (${painting.price} $ CAD).\n\nMerci de me contacter pour plus d'informations.`
+    ? painting.sold
+      ? `Bonjour Manon,\n\nJe suis intéressé(e) par votre œuvre « ${painting.title} ».\n\nMerci de me contacter pour plus d'informations.`
+      : `Bonjour Manon,\n\nJe suis intéressé(e) par votre œuvre « ${painting.title} » (${painting.price} $ CAD).\n\nMerci de me contacter pour plus d'informations.`
     : "";
 
   const [error, setError] = useState(false);
@@ -29,7 +31,7 @@ export default function ContactModal({ painting, isOpen, onClose }: ContactModal
     e.preventDefault();
     setError(false);
     try {
-      const res = await fetch("https://formsubmit.co/ajax/manonsauve65@hotmail.com", {
+      const res = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({
@@ -37,14 +39,11 @@ export default function ContactModal({ painting, isOpen, onClose }: ContactModal
           email: formData.email,
           phone: formData.phone || "Non fourni",
           message: formData.message || defaultMessage,
-          _subject: painting
-            ? `Demande: ${painting.title}`
-            : "Nouveau message depuis votre site",
-          painting: painting?.title || "Aucune",
+          painting: painting?.title || undefined,
         }),
       });
       const data = await res.json();
-      if (data.success === "true") {
+      if (data.success === true) {
         setSubmitted(true);
         setTimeout(() => {
           setSubmitted(false);
@@ -99,7 +98,7 @@ export default function ContactModal({ painting, isOpen, onClose }: ContactModal
                 </h3>
                 {painting && (
                   <p className="text-muted text-sm mb-6">
-                    Re: <span className="italic">{painting.title}</span> — {painting.price} $ CAD
+                    Re: <span className="italic">{painting.title}</span> — {painting?.sold ? "Vendu" : `${painting.price} $ CAD`}
                   </p>
                 )}
                 {!painting && <div className="separator !mx-0 mt-4 mb-8" />}

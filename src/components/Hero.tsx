@@ -18,20 +18,20 @@ export default function Hero() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1.2, ease: "easeOut" }}
         >
-          <p className="text-sm tracking-[0.4em] uppercase text-accent mb-6 font-sans font-light">
+          <p className="text-xs tracking-[0.5em] uppercase text-accent mb-8 font-sans font-light" style={{ fontFamily: "'Cormorant SC', Georgia, serif", letterSpacing: "0.45em", fontSize: "0.7rem" }}>
             Artiste Peintre
           </p>
 
-          <h1 className="font-serif text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-medium text-charcoal leading-none tracking-tight">
+          <h1 className="font-serif italic text-7xl sm:text-8xl md:text-9xl lg:text-[10rem] font-light text-charcoal leading-none tracking-tight" style={{ fontWeight: 300 }}>
             Manon
             <br />
-            <span className="italic font-normal">Sauvé</span>
+            Sauvé
           </h1>
 
-          <div className="separator mt-10 mb-8" />
+          <div className="separator mt-16 mb-10" />
 
           <p className="text-muted font-light max-w-md mx-auto leading-relaxed mb-10">
-            Des œuvres qui capturent la lumière et l&apos;émotion du paysage québécois
+            Voici une sélection d&apos;œuvres marquantes qui explorent le corps féminin et l&apos;émotion intérieure des femmes, à travers différentes époques et sensibilités artistiques.
           </p>
 
           <a

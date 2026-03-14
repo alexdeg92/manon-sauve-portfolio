@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
 import { getPaintings, savePaintings, isAuthed, Painting } from "@/lib/paintings-storage";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET() {
   try {
     const paintings = await getPaintings();
-    return NextResponse.json(paintings);
+    return NextResponse.json(paintings, {
+      headers: { "Cache-Control": "no-store, no-cache, must-revalidate" },
+    });
   } catch (err) {
     console.error("GET /api/paintings error:", err);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });

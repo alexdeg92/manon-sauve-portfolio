@@ -13,7 +13,8 @@ const config: Config = {
         "accent-light": "#C4A882",
       },
       fontFamily: {
-        serif: ["Playfair Display", "Georgia", "serif"],
+        serif: ["Cormorant Garant", "Georgia", "serif"],
+        "serif-sc": ["Cormorant SC", "Georgia", "serif"],
         sans: ["Inter", "system-ui", "sans-serif"],
       },
     },

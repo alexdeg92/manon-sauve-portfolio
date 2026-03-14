@@ -4,12 +4,12 @@ import { getPaintings, savePaintings, isAuthed } from "@/lib/paintings-storage";
 const SEED_DATA = [
   {
     id: "portrait-rose",
-    title: "Éclat rose",
-    medium: "Huile au couteau sur toile",
-    dimensions: '18" × 24"',
-    price: 950,
+    title: "Tête Rose",
+    medium: "Acrylique",
+    dimensions: '36" × 24"',
+    price: 400,
     image: "/paintings/portrait-rose.jpg",
-    year: 2024,
+    year: 2021,
   },
   {
     id: "portrait-boucle",

@@ -7,6 +7,8 @@ const nextConfig = {
       // Vercel Blob storage for admin-uploaded paintings
       { protocol: 'https', hostname: '*.public.blob.vercel-storage.com' },
       { protocol: 'https', hostname: '*.blob.vercel-storage.com' },
+      // Supabase storage
+      { protocol: 'https', hostname: '*.supabase.co' },
     ],
   },
 };

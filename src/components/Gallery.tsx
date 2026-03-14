@@ -59,7 +59,7 @@ export default function Gallery({ paintings, onSelect }: GalleryProps) {
 
               <h3 className="font-serif text-lg text-charcoal">{painting.title}</h3>
               <p className="text-sm text-muted mt-1">{painting.medium} — {painting.dimensions}</p>
-              <p className="text-sm font-medium text-accent mt-1">{painting.price} $ CAD</p>
+              <p className="text-sm font-medium text-accent mt-1">{painting.sold ? <span className="text-red-500">Vendu</span> : `${painting.price} $ CAD`}</p>
             </motion.div>
           ))}
         </div>

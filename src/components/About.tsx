@@ -1,8 +1,20 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 
 export default function About() {
+  const [photoUrl, setPhotoUrl] = useState("/manon-profile.jpg");
+
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.profile_photo) setPhotoUrl(d.profile_photo);
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <section id="a-propos" className="py-28 md:py-36 bg-warm">
       <div className="max-w-4xl mx-auto px-6">
@@ -25,29 +37,41 @@ export default function About() {
           transition={{ duration: 0.8, delay: 0.2 }}
           className="grid md:grid-cols-2 gap-12 items-center"
         >
-          <div className="aspect-[4/5] bg-cream rounded-sm overflow-hidden">
+          <div className="aspect-[3/4] bg-cream rounded-sm overflow-hidden">
             <img
-              src="https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=600&q=80"
-              alt="Manon Sauvé dans son atelier"
-              className="w-full h-full object-cover"
+              src={photoUrl}
+              alt="Manon Sauvé, artiste peintre"
+              className="w-full h-full object-cover object-center"
             />
           </div>
 
           <div className="space-y-6 text-muted leading-relaxed font-light">
             <p>
-              Née au cœur de la région de Lanaudière, Manon Sauvé peint depuis plus de vingt ans.
-              Inspirée par les paysages changeants du Québec, elle capture sur toile la lumière
-              éphémère des saisons et l&apos;émotion tranquille de la nature.
+              Manon Sauvé est née à Les Cèdres en 1965, au cœur de la région de la Montérégie.
+              Artiste peintre autodidacte, elle crée depuis plus de 40 ans.
             </p>
             <p>
-              Ses œuvres, principalement réalisées à l&apos;huile et à l&apos;acrylique, se
-              distinguent par leur palette chaleureuse et leur composition harmonieuse. Chaque
-              tableau est une invitation à la contemplation et au calme.
+              Dès ses débuts, elle développe une passion profonde pour le dessin, discipline
+              fondatrice qui demeure au centre de sa démarche artistique. Après des études en
+              arts plastiques, elle travaille quelques années dans le domaine de l&apos;imprimerie,
+              notamment en sérigraphie sur divers supports, ce qui enrichit sa compréhension
+              des techniques et des matières.
             </p>
             <p>
-              Manon a exposé dans plusieurs galeries au Québec et ses œuvres font partie de
-              collections privées au Canada et en Europe. Elle travaille depuis son atelier à
-              Joliette, où elle accueille les visiteurs sur rendez-vous.
+              Elle explore différents médiums, dont le fusain et la gouache, mais privilégie
+              l&apos;acrylique pour sa polyvalence et l&apos;étendue des possibilités créatives
+              qu&apos;elle offre. Ses lectures, les ateliers de modèle vivant et la fréquentation
+              d&apos;expositions nourrissent continuellement sa recherche et contribuent au
+              perfectionnement de sa technique.
+            </p>
+            <p>
+              Inspirée par le corps féminin, elle capte sur toile la lumière fugace des femmes
+              et la subtilité de leurs émotions. Ses œuvres, aux palettes chaleureuses et aux
+              compositions harmonieuses, invitent à la contemplation et à l&apos;apaisement.
+            </p>
+            <p>
+              Elle travaille aujourd&apos;hui depuis son atelier de Saint-Joseph-du-Lac, où elle
+              accueille les visiteurs sur rendez-vous.
             </p>
             <p className="text-accent italic font-serif text-lg">
               « Peindre, c&apos;est offrir un moment de silence dans un monde bruyant. »

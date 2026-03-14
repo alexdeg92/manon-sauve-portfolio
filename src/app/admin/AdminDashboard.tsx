@@ -9,9 +9,10 @@ interface Painting {
   title: string;
   medium: string;
   dimensions: string;
-  price: number;
+  price: number | null;
   image: string;
   year: number;
+  sold?: boolean;
 }
 
 type FormData = {
@@ -21,6 +22,7 @@ type FormData = {
   price: string;
   year: string;
   image: string;
+  sold: boolean;
 };
 
 const emptyForm: FormData = {
@@ -30,6 +32,7 @@ const emptyForm: FormData = {
   price: "",
   year: new Date().getFullYear().toString(),
   image: "",
+  sold: false,
 };
 
 export default function AdminDashboard() {
@@ -43,7 +46,10 @@ export default function AdminDashboard() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
   const [seeding, setSeeding] = useState(false);
+  const [profilePhoto, setProfilePhoto] = useState<string>("/manon-profile.jpg");
+  const [uploadingProfile, setUploadingProfile] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const profileFileRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   // Load paintings
@@ -60,8 +66,17 @@ export default function AdminDashboard() {
     }
   };
 
+  const loadSettings = async () => {
+    try {
+      const res = await fetch("/api/settings");
+      const data = await res.json();
+      if (data.profile_photo) setProfilePhoto(data.profile_photo);
+    } catch {}
+  };
+
   useEffect(() => {
     loadPaintings();
+    loadSettings();
   }, []);
 
   const showToast = (msg: string, ok: boolean) => {
@@ -128,6 +143,7 @@ export default function AdminDashboard() {
       price: String(p.price),
       year: String(p.year),
       image: p.image,
+      sold: p.sold ?? false,
     });
     setEditTarget(p);
     setView("edit");
@@ -157,6 +173,7 @@ export default function AdminDashboard() {
             price: Number(form.price),
             year: Number(form.year),
             image: form.image,
+            sold: form.sold,
           }),
         });
       } else {
@@ -209,6 +226,83 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleToggleSold = async (p: Painting) => {
+    const newSold = !p.sold;
+    setPaintings((prev) =>
+      prev.map((x) => (x.id === p.id ? { ...x, sold: newSold } : x))
+    );
+    try {
+      const res = await fetch(`/api/paintings/${p.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sold: newSold }),
+      });
+      if (!res.ok) {
+        setPaintings((prev) =>
+          prev.map((x) => (x.id === p.id ? { ...x, sold: !newSold } : x))
+        );
+        showToast("Erreur lors de la mise à jour", false);
+      }
+    } catch {
+      setPaintings((prev) =>
+        prev.map((x) => (x.id === p.id ? { ...x, sold: !newSold } : x))
+      );
+      showToast("Erreur lors de la mise à jour", false);
+    }
+  };
+
+  const handleReorder = async (index: number, direction: "up" | "down") => {
+    const newIndex = direction === "up" ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= paintings.length) return;
+    const reordered = [...paintings];
+    [reordered[index], reordered[newIndex]] = [reordered[newIndex], reordered[index]];
+    setPaintings(reordered);
+    try {
+      const res = await fetch("/api/paintings/reorder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: reordered.map((p) => p.id) }),
+      });
+      if (!res.ok) {
+        showToast("Erreur lors de la réorganisation", false);
+        loadPaintings();
+      }
+    } catch {
+      showToast("Erreur lors de la réorganisation", false);
+      loadPaintings();
+    }
+  };
+
+  const handleProfileUpload = async (file: File) => {
+    setUploadingProfile(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const data = await res.json();
+      if (res.ok) {
+        const newUrl = data.url;
+        setProfilePhoto(newUrl);
+        const putRes = await fetch("/api/settings", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ profile_photo: newUrl }),
+        });
+        if (putRes.ok) {
+          showToast("Photo mise à jour ✓", true);
+        } else {
+          showToast("Erreur lors de la sauvegarde", false);
+        }
+      } else {
+        showToast(data.error || "Erreur upload", false);
+      }
+    } catch {
+      showToast("Erreur lors de l'upload", false);
+    } finally {
+      setUploadingProfile(false);
+    }
+  };
+
   const Field = ({
     label,
     children,
@@ -244,158 +338,162 @@ export default function AdminDashboard() {
           </h1>
         </div>
 
-        <div className="max-w-xl mx-auto p-6 space-y-5 mt-4">
-          {/* Photo Upload — first and most prominent */}
-          <Field label="Photo du tableau *">
-            <div
-              className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
-                form.image
-                  ? "border-green-400 bg-green-50"
-                  : "border-[#e0d9d0] bg-white hover:border-[#9b8b7c]"
-              }`}
-              onClick={() => fileRef.current?.click()}
-            >
-              {form.image ? (
-                <div className="space-y-3">
-                  <div className="relative w-32 h-32 mx-auto rounded-lg overflow-hidden">
-                    <Image
+        {/* Two-column on desktop, stacked on mobile */}
+        <div className="max-w-5xl mx-auto p-6 mt-4">
+          <div className="flex flex-col md:flex-row gap-8 items-start">
+
+            {/* LEFT — Image upload (big, sticky on desktop) */}
+            <div className="w-full md:w-2/5 md:sticky md:top-6">
+              <label className="block text-xs font-semibold text-[#5c5c5c] mb-2 uppercase tracking-wide">
+                Photo du tableau *
+              </label>
+              <div
+                className={`border-2 border-dashed rounded-2xl cursor-pointer transition-colors overflow-hidden ${
+                  form.image
+                    ? "border-green-400 bg-green-50"
+                    : "border-[#e0d9d0] bg-white hover:border-[#9b8b7c]"
+                }`}
+                style={{ minHeight: "360px" }}
+                onClick={() => fileRef.current?.click()}
+              >
+                {form.image ? (
+                  <div className="relative w-full" style={{ aspectRatio: "3/4" }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
                       src={form.image}
                       alt="Aperçu"
-                      fill
-                      className="object-cover"
+                      className="w-full h-full object-cover"
                     />
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/40 text-white text-xs text-center py-2 backdrop-blur-sm">
+                      ✓ Photo chargée — cliquer pour changer
+                    </div>
                   </div>
-                  <p className="text-sm text-green-700 font-medium">
-                    ✓ Photo chargée
-                  </p>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setForm((f) => ({ ...f, image: "" }));
-                    }}
-                    className="text-xs text-[#9b8b7c] underline"
-                  >
-                    Changer de photo
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {uploading ? (
-                    <p className="text-[#9b8b7c] text-base">
-                      Téléchargement en cours...
-                    </p>
-                  ) : (
-                    <>
-                      <div className="text-4xl">📷</div>
-                      <p className="text-[#5c5c5c] text-base font-medium">
-                        Cliquez pour choisir une photo
-                      </p>
-                      <p className="text-[#bbb] text-sm">
-                        JPG, PNG — max 10 Mo
-                      </p>
-                    </>
-                  )}
-                </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full py-20 space-y-3 px-6 text-center" style={{ minHeight: "360px" }}>
+                    {uploading ? (
+                      <p className="text-[#9b8b7c] text-base">Téléchargement en cours...</p>
+                    ) : (
+                      <>
+                        <div className="text-5xl">📷</div>
+                        <p className="text-[#5c5c5c] text-base font-medium">Cliquez pour choisir une photo</p>
+                        <p className="text-[#bbb] text-sm">JPG, PNG — max 10 Mo</p>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleImageUpload(file);
+                }}
+              />
+              {form.image && (
+                <button
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, image: "" }))}
+                  className="mt-2 text-xs text-[#9b8b7c] underline w-full text-center"
+                >
+                  Supprimer la photo
+                </button>
               )}
             </div>
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleImageUpload(file);
-              }}
-            />
-          </Field>
 
-          <Field label="Titre du tableau *">
-            <input
-              type="text"
-              value={form.title}
-              onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-              className={inputClass}
-              placeholder="ex. Éclat rose"
-            />
-          </Field>
+            {/* RIGHT — Fields */}
+            <div className="w-full md:w-3/5 space-y-5">
+              <Field label="Titre du tableau *">
+                <input
+                  type="text"
+                  value={form.title}
+                  onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                  className={inputClass}
+                  placeholder="ex. Éclat rose"
+                />
+              </Field>
 
-          <Field label="Technique">
-            <input
-              type="text"
-              value={form.medium}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, medium: e.target.value }))
-              }
-              className={inputClass}
-              placeholder='ex. Huile sur toile'
-            />
-          </Field>
+              <Field label="Technique">
+                <input
+                  type="text"
+                  value={form.medium}
+                  onChange={(e) => setForm((f) => ({ ...f, medium: e.target.value }))}
+                  className={inputClass}
+                  placeholder="ex. Huile sur toile"
+                />
+              </Field>
 
-          <Field label="Dimensions">
-            <input
-              type="text"
-              value={form.dimensions}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, dimensions: e.target.value }))
-              }
-              className={inputClass}
-              placeholder='ex. 18" × 24"'
-            />
-          </Field>
+              <Field label="Dimensions">
+                <input
+                  type="text"
+                  value={form.dimensions}
+                  onChange={(e) => setForm((f) => ({ ...f, dimensions: e.target.value }))}
+                  className={inputClass}
+                  placeholder='ex. 18" × 24"'
+                />
+              </Field>
 
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="Prix ($CAD)">
-              <input
-                type="number"
-                value={form.price}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, price: e.target.value }))
-                }
-                className={inputClass}
-                placeholder="ex. 950"
-                min="0"
-              />
-            </Field>
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="Prix ($CAD)">
+                  <input
+                    type="number"
+                    value={form.price}
+                    onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
+                    className={inputClass}
+                    placeholder="ex. 950"
+                    min="0"
+                  />
+                </Field>
+                <Field label="Année">
+                  <input
+                    type="number"
+                    value={form.year}
+                    onChange={(e) => setForm((f) => ({ ...f, year: e.target.value }))}
+                    className={inputClass}
+                    placeholder="ex. 2024"
+                    min="2000"
+                    max="2100"
+                  />
+                </Field>
+              </div>
 
-            <Field label="Année">
-              <input
-                type="number"
-                value={form.year}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, year: e.target.value }))
-                }
-                className={inputClass}
-                placeholder="ex. 2024"
-                min="2000"
-                max="2100"
-              />
-            </Field>
-          </div>
+              {/* Sold Checkbox */}
+              <div className="flex items-center gap-3 py-2">
+                <input
+                  type="checkbox"
+                  id="sold-checkbox"
+                  checked={form.sold}
+                  onChange={(e) => setForm((f) => ({ ...f, sold: e.target.checked }))}
+                  className="w-5 h-5 rounded border-[#e0d9d0] accent-[#9b8b7c]"
+                />
+                <label htmlFor="sold-checkbox" className="text-xs font-semibold text-[#5c5c5c] uppercase tracking-wide cursor-pointer">
+                  Vendu
+                </label>
+              </div>
 
-          {/* Save Button */}
-          <div className="pt-4">
-            <button
-              onClick={handleSave}
-              disabled={saving || uploading}
-              className="w-full bg-[#2c2c2c] text-white py-4 rounded-xl text-lg font-medium hover:bg-[#444] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {saving
-                ? "Sauvegarde en cours..."
-                : view === "edit"
-                ? "✓ Enregistrer les modifications"
-                : "✓ Ajouter le tableau"}
-            </button>
-          </div>
-
-          <div className="pt-1">
-            <button
-              onClick={() => setView("list")}
-              className="w-full border border-[#e0d9d0] text-[#9b8b7c] py-3 rounded-xl text-base hover:bg-[#f0ebe4] transition-colors"
-            >
-              Annuler
-            </button>
+              {/* Save Button */}
+              <div className="pt-2">
+                <button
+                  onClick={handleSave}
+                  disabled={saving || uploading}
+                  className="w-full bg-[#2c2c2c] text-white py-4 rounded-xl text-base font-medium hover:bg-[#444] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {saving
+                    ? "Sauvegarde en cours..."
+                    : view === "edit"
+                    ? "✓ Enregistrer les modifications"
+                    : "✓ Ajouter le tableau"}
+                </button>
+              </div>
+              <button
+                onClick={() => setView("list")}
+                className="w-full border border-[#e0d9d0] text-[#9b8b7c] py-3 rounded-xl text-base hover:bg-[#f0ebe4] transition-colors"
+              >
+                Annuler
+              </button>
+            </div>
           </div>
         </div>
 
@@ -479,10 +577,10 @@ export default function AdminDashboard() {
         {/* Paintings Grid */}
         {!loading && paintings.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {paintings.map((p) => (
+            {paintings.map((p, idx) => (
               <div
                 key={p.id}
-                className="bg-white rounded-2xl overflow-hidden shadow-sm border border-[#f0ebe4]"
+                className={`bg-white rounded-2xl overflow-hidden shadow-sm border border-[#f0ebe4] ${p.sold ? "opacity-70" : ""}`}
               >
                 {/* Image */}
                 <div className="relative aspect-[3/4] bg-[#f0ebe4]">
@@ -490,10 +588,32 @@ export default function AdminDashboard() {
                     src={p.image}
                     alt={p.title}
                     fill
-                    className="object-cover"
+                    className={`object-cover ${p.sold ? "grayscale-[40%]" : ""}`}
                     sizes="(max-width: 640px) 100vw, 33vw"
                     unoptimized={p.image.startsWith("http")}
                   />
+                  {p.sold && (
+                    <div className="absolute top-3 left-3 bg-[#9b8b7c] text-white text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full shadow">
+                      Vendu
+                    </div>
+                  )}
+                  {/* Reorder arrows */}
+                  <div className="absolute top-2 right-2 flex flex-col gap-1">
+                    <button
+                      onClick={() => handleReorder(idx, "up")}
+                      disabled={idx === 0}
+                      className="bg-white/80 hover:bg-white text-[#2c2c2c] w-7 h-7 rounded-full text-sm flex items-center justify-center shadow disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      onClick={() => handleReorder(idx, "down")}
+                      disabled={idx === paintings.length - 1}
+                      className="bg-white/80 hover:bg-white text-[#2c2c2c] w-7 h-7 rounded-full text-sm flex items-center justify-center shadow disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    >
+                      ↓
+                    </button>
+                  </div>
                 </div>
 
                 {/* Info */}
@@ -506,7 +626,7 @@ export default function AdminDashboard() {
                     {p.dimensions ? ` — ${p.dimensions}` : ""}
                   </p>
                   <p className="text-sm font-medium text-[#2c2c2c]">
-                    {p.price} $ CAD
+                    {`${p.price} $ CAD`}
                   </p>
                   <p className="text-xs text-[#bbb]">{p.year}</p>
                 </div>
@@ -520,16 +640,66 @@ export default function AdminDashboard() {
                     ✏️ Modifier
                   </button>
                   <button
-                    onClick={() => setDeleteConfirm(p.id)}
-                    className="flex-1 border border-red-200 text-red-500 py-2 rounded-lg text-sm hover:bg-red-50 transition-colors"
+                    onClick={() => handleToggleSold(p)}
+                    className={`flex-1 border py-2 rounded-lg text-sm transition-colors ${
+                      p.sold
+                        ? "border-[#9b8b7c] bg-[#9b8b7c] text-white hover:bg-[#8a7a6b]"
+                        : "border-[#e0d9d0] text-[#5c5c5c] hover:bg-[#f9f6f1]"
+                    }`}
                   >
-                    🗑 Supprimer
+                    {p.sold ? "✓ Vendu" : "Vendu"}
+                  </button>
+                  <button
+                    onClick={() => setDeleteConfirm(p.id)}
+                    className="border border-red-200 text-red-500 py-2 px-3 rounded-lg text-sm hover:bg-red-50 transition-colors"
+                  >
+                    🗑
                   </button>
                 </div>
               </div>
             ))}
           </div>
         )}
+      </div>
+
+      {/* Profile Photo Section */}
+      <div className="max-w-4xl mx-auto px-6 mt-12">
+        <div className="bg-white rounded-2xl border border-[#f0ebe4] p-6 shadow-sm">
+          <h2 className="font-serif text-xl text-[#2c2c2c] mb-4">Photo de profil</h2>
+          <div className="flex items-center gap-6">
+            <div className="relative w-28 h-28 rounded-full overflow-hidden bg-[#f0ebe4] flex-shrink-0">
+              <Image
+                src={profilePhoto}
+                alt="Photo de profil"
+                fill
+                className="object-cover"
+                unoptimized={profilePhoto.startsWith("http")}
+              />
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm text-[#9b8b7c]">
+                Cette photo apparaît dans la section « À propos » du site.
+              </p>
+              <button
+                onClick={() => profileFileRef.current?.click()}
+                disabled={uploadingProfile}
+                className="bg-[#2c2c2c] text-white px-5 py-2 rounded-xl text-sm font-medium hover:bg-[#444] transition-colors disabled:opacity-50"
+              >
+                {uploadingProfile ? "Téléchargement..." : "Changer la photo"}
+              </button>
+              <input
+                ref={profileFileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleProfileUpload(file);
+                }}
+              />
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Delete Confirmation Modal */}

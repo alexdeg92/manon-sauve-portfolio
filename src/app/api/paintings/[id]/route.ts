@@ -13,6 +13,12 @@ export async function PUT(
   try {
     const body = await req.json();
     const paintings = await getPaintings();
+    
+    if (!Array.isArray(paintings)) {
+      console.error("Paintings is not an array:", paintings);
+      return NextResponse.json({ error: "Données corrompues" }, { status: 500 });
+    }
+
     const idx = paintings.findIndex((p) => p.id === params.id);
 
     if (idx === -1) {
@@ -27,13 +33,14 @@ export async function PUT(
       price: body.price !== undefined ? Number(body.price) : paintings[idx].price,
       image: body.image ?? paintings[idx].image,
       year: body.year !== undefined ? Number(body.year) : paintings[idx].year,
+      sold: body.sold !== undefined ? Boolean(body.sold) : paintings[idx].sold,
     };
 
     await savePaintings(paintings);
     return NextResponse.json(paintings[idx]);
   } catch (err) {
     console.error("PUT /api/paintings/[id] error:", err);
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    return NextResponse.json({ error: `Erreur serveur: ${err instanceof Error ? err.message : "unknown"}` }, { status: 500 });
   }
 }
 
