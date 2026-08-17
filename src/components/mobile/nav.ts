@@ -10,8 +10,9 @@ export type ScreenName =
   | "demandes"
   | "gestion"
   | "collections"
+  | "visites"
+  | "expositions"
   | "contenu"
-  | "analytique"
   | "medias";
 
 export type Mode = "visiteur" | "artiste";
@@ -22,8 +23,9 @@ export const ARTIST_TABS: ScreenName[] = ["bord", "oeuvres", "demandes", "gestio
 /** Sub-screens highlight their parent tab, as in the design's data-parent. */
 export const PARENT_TAB: Partial<Record<ScreenName, ScreenName>> = {
   collections: "gestion",
+  visites: "gestion",
+  expositions: "gestion",
   contenu: "gestion",
-  analytique: "gestion",
   medias: "gestion",
 };
 
@@ -37,7 +39,8 @@ export const MODE_OF: Record<ScreenName, Mode> = {
   demandes: "artiste",
   gestion: "artiste",
   collections: "artiste",
+  visites: "artiste",
+  expositions: "artiste",
   contenu: "artiste",
-  analytique: "artiste",
   medias: "artiste",
 };

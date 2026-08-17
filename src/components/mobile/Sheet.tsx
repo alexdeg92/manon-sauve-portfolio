@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 interface SheetProps {
   open: boolean;
@@ -8,10 +9,22 @@ interface SheetProps {
   children: React.ReactNode;
 }
 
-/** Bottom sheet: scrim fades, panel slides up from the bottom edge. */
+/**
+ * Bottom sheet: scrim fades, panel slides up from the bottom edge.
+ *
+ * Rendered into document.body rather than in place. The screens that open a
+ * sheet have `animate-mFade` on their root, and an animated opacity with
+ * fill-mode `both` creates a stacking context — which would trap this panel's
+ * z-index inside it and let the fixed TabBar (z-50) paint over the sheet's
+ * lower half, hiding the reply box. A portal sidesteps the ancestor entirely.
+ */
 export default function Sheet({ open, onClose, children }: SheetProps) {
   const [mounted, setMounted] = useState(open);
   const [entered, setEntered] = useState(false);
+  const [canPortal, setCanPortal] = useState(false);
+
+  // document.body only exists on the client, so the portal waits for mount.
+  useEffect(() => setCanPortal(true), []);
 
   useEffect(() => {
     if (open) {
@@ -39,9 +52,9 @@ export default function Sheet({ open, onClose, children }: SheetProps) {
     };
   }, [open, onClose]);
 
-  if (!mounted) return null;
+  if (!mounted || !canPortal) return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[90]" role="dialog" aria-modal="true">
       <div
         onClick={onClose}
@@ -49,7 +62,7 @@ export default function Sheet({ open, onClose, children }: SheetProps) {
         style={{ opacity: entered ? 1 : 0 }}
       />
       <div
-        className="absolute inset-x-0 bottom-0 max-h-[88%] overflow-y-auto rounded-t-[26px] bg-m-paper transition-transform duration-500"
+        className="absolute inset-x-0 bottom-0 max-h-[88svh] overflow-y-auto rounded-t-[26px] bg-m-paper pb-[max(1rem,env(safe-area-inset-bottom))] transition-transform duration-500"
         style={{
           transform: entered ? "none" : "translateY(100%)",
           transitionTimingFunction: "cubic-bezier(.16,1,.3,1)",
@@ -60,6 +73,7 @@ export default function Sheet({ open, onClose, children }: SheetProps) {
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

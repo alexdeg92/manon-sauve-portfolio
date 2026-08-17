@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useSite } from "@/components/site/context";
-import DemoNote from "../DemoNote";
 import SubScreen from "./SubScreen";
 
 const DEFAULT_TITLE = "Figures, silhouettes et couleur";
@@ -17,7 +16,12 @@ export default function Contenu({ onBack }: { onBack: () => void }) {
   return (
     <SubScreen title={t("Contenu du site", "Site content")} onBack={onBack}>
       <div className="px-6 pt-4">
-        <DemoNote />
+        <p className="m-0 rounded-[12px] border border-dashed border-m-line-strong bg-m-sand-soft px-4 py-3 text-[11px] leading-[1.5] text-m-stone">
+          {t(
+            "L'enregistrement n'est pas encore branché — ces textes vivent dans le code pour l'instant.",
+            "Saving is not wired up yet — this copy still lives in the code."
+          )}
+        </p>
       </div>
 
       <div className="px-6 pt-5">

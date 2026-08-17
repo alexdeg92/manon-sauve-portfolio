@@ -36,6 +36,7 @@ export default function Commission({ aboutWork, onConsumeWork }: CommissionProps
   const [brief, setBrief] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [status, setStatus] = useState<Status>(null);
   const [sending, setSending] = useState(false);
 
@@ -80,7 +81,7 @@ export default function Commission({ aboutWork, onConsumeWork }: CommissionProps
         body: JSON.stringify({
           name: name.trim(),
           email: email.trim(),
-          phone: "Non fourni",
+          phone: phone.trim(),
           message: `Demande de commande.\n\n${lines}`,
           painting: aboutWork ?? "Commande",
         }),
@@ -230,6 +231,14 @@ export default function Commission({ aboutWork, onConsumeWork }: CommissionProps
                     type="email"
                     autoComplete="email"
                     className="rounded border border-[#D8D3C8] bg-transparent px-4 py-3.5 text-[14px] outline-none focus:border-m-sage"
+                  />
+                  <input
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder={t("Téléphone (optionnel)", "Phone (optional)")}
+                    type="tel"
+                    autoComplete="tel"
+                    className="col-span-2 rounded border border-[#D8D3C8] bg-transparent px-4 py-3.5 text-[14px] outline-none focus:border-m-sage"
                   />
                 </div>
                 <div className="mt-5 rounded bg-m-sand-soft px-5 py-[18px] text-[14px] leading-[1.7] text-m-stone-deep">

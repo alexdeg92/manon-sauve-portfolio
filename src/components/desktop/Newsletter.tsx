@@ -32,7 +32,6 @@ export default function Newsletter() {
         body: JSON.stringify({
           name: email.trim(),
           email: email.trim(),
-          phone: "Non fourni",
           message: "Inscription à l'infolettre depuis le site.",
           painting: "Infolettre",
         }),

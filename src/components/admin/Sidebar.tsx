@@ -51,22 +51,33 @@ const ITEMS: { key: AdminView; label: string; icon: React.ReactNode }[] = [
     ),
   },
   {
+    key: "visites",
+    label: "Visites d'atelier",
+    icon: (
+      <>
+        <rect x="3.5" y="4.5" width="17" height="16" rx="2" />
+        <path d="M3.5 9.5h17M8 3v3M16 3v3" />
+        <circle cx="12" cy="14.5" r="1.6" />
+      </>
+    ),
+  },
+  {
+    key: "expositions",
+    label: "Expositions",
+    icon: (
+      <>
+        <path d="M4 5h16M6 5v9a3 3 0 0 0 3 3h6a3 3 0 0 0 3-3V5" />
+        <path d="M12 17v3M9 20h6" />
+      </>
+    ),
+  },
+  {
     key: "contenu",
     label: "Contenu du site",
     icon: (
       <>
         <path d="M5 4h14v16H5z" />
         <path d="M8 8h8M8 12h8M8 16h5" />
-      </>
-    ),
-  },
-  {
-    key: "analytique",
-    label: "Analytique",
-    icon: (
-      <>
-        <path d="M4 16.5 9.5 11l3.5 3.5L20 7" />
-        <path d="M20 12V7h-5" />
       </>
     ),
   },

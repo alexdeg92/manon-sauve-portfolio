@@ -42,7 +42,7 @@ export default function EnquirySheet({ open, painting, onClose }: EnquirySheetPr
         body: JSON.stringify({
           name,
           email,
-          phone: phone || "Non fourni",
+          phone: phone.trim(),
           message: message || defaultMessage,
           painting: painting?.title,
         }),

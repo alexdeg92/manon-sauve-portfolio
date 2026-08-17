@@ -2,33 +2,21 @@
 --   collection  the series a work belongs to (Figures, Mouvement, …)
 --   note        the studio note shown on a work's detail view
 --
--- Both are nullable. Until this runs, savePaintings() strips them and warns,
--- so the app keeps working on an unmigrated database.
+-- Both are nullable. Only needed for a database created before these columns
+-- existed; 000_init.sql already includes them.
 --
--- Run against Postgres (Supabase today, Neon after the move):
---   psql "$DATABASE_URL" -f migrations/001_add_collection_and_note.sql
+-- Run against Neon:
+--   node --env-file=.env.local scripts/apply-migration.mjs migrations/001_add_collection_and_note.sql
 
 ALTER TABLE paintings ADD COLUMN IF NOT EXISTS collection text;
 ALTER TABLE paintings ADD COLUMN IF NOT EXISTS note text;
 
--- Optional backfill: seed each work's collection from the same keyword rule the
--- site uses to derive one, so existing rows are not blank on first load.
-UPDATE paintings SET collection = 'Danse'
-  WHERE collection IS NULL
-    AND (id ILIKE '%ballet%' OR id ILIKE '%pointes%' OR id ILIKE '%flamenco%'
-         OR title ILIKE '%dansant%' OR title ILIKE '%danse%');
-
-UPDATE paintings SET collection = 'Abstrait'
-  WHERE collection IS NULL
-    AND (id ILIKE '%abstrait%' OR id ILIKE '%cite%'
-         OR title ILIKE '%forêt%' OR title ILIKE '%lys%');
-
-UPDATE paintings SET collection = 'Silhouettes'
-  WHERE collection IS NULL
-    AND (id ILIKE '%silhouette%' OR id ILIKE '%robe%' OR id ILIKE '%talons%'
-         OR title ILIKE '%legs%' OR title ILIKE '%body%');
-
-UPDATE paintings SET collection = 'Portraits'
-  WHERE collection IS NULL
-    AND (id ILIKE '%portrait%' OR id ILIKE '%cheveux%' OR id ILIKE '%femme%'
-         OR title ILIKE '%tête%' OR title ILIKE '%regard%');
+-- NOTE: an earlier version of this file backfilled `collection` by keyword-matching
+-- id and title. That was removed because the ids are stale slugs from the original
+-- 2024 seed data and no longer describe the current works: `abstrait-feu` holds
+-- "Jambes dansantes", `cite-bleue` holds "La forêt", `robe-rouge` holds "Scarlett".
+-- The backfill therefore wrote guesses into the admin as if Manon had entered them.
+--
+-- Leave the column NULL. collectionOf() in src/lib/mobile.ts already derives a
+-- display group for unset works, so the gallery never shows blank, and a stored
+-- value keeps meaning "a human chose this".

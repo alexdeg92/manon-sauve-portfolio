@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Painting } from "@/data/paintings";
-import { DEMO_INQUIRIES } from "@/components/mobile/demo-data";
+import { EnquiryStatus, EnquiryWithThread } from "@/lib/enquiries";
 import Sidebar from "./Sidebar";
 import EditDrawer from "./EditDrawer";
 import Bord from "./views/Bord";
@@ -11,7 +11,8 @@ import Oeuvres from "./views/Oeuvres";
 import Demandes from "./views/Demandes";
 import Collections from "./views/Collections";
 import Contenu from "./views/Contenu";
-import Analytique from "./views/Analytique";
+import Visites from "./views/Visites";
+import Expositions from "./views/Expositions";
 import Medias from "./views/Medias";
 import { isPhoneViewport } from "@/lib/admin-target";
 import { AdminView, Draft, VIEW_TITLES, draftFrom, emptyDraft } from "./types";
@@ -37,9 +38,8 @@ export default function AdminPortal() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [selected, setSelected] = useState<string[]>([]);
   const [draft, setDraft] = useState<Draft | null>(null);
-  const [openInquiryId, setOpenInquiryId] = useState<string | null>(
-    DEMO_INQUIRIES[0]?.id ?? null
-  );
+  const [enquiries, setEnquiries] = useState<EnquiryWithThread[]>([]);
+  const [openInquiryId, setOpenInquiryId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -69,15 +69,46 @@ export default function AdminPortal() {
     }
   }, [say]);
 
+  const loadEnquiries = useCallback(async () => {
+    try {
+      const res = await fetch("/api/enquiries");
+      if (!res.ok) return;
+      const data = await res.json();
+      if (Array.isArray(data)) setEnquiries(data);
+    } catch {
+      // The catalogue still works without the inbox; stay quiet here.
+    }
+  }, []);
+
   useEffect(() => {
     loadPaintings();
+    loadEnquiries();
     fetch("/api/settings")
       .then((r) => r.json())
       .then((d) => {
         if (d?.profile_photo) setProfilePhoto(d.profile_photo);
       })
       .catch(() => {});
-  }, [loadPaintings]);
+  }, [loadPaintings, loadEnquiries]);
+
+  /**
+   * New enquiries arrive while the portal is open, so the inbox is re-read on a
+   * timer and whenever the tab regains focus. Without this a request submitted
+   * from the site never appears until a manual reload.
+   */
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === "visible") loadEnquiries();
+    };
+    const timer = setInterval(refresh, 30000);
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [loadEnquiries]);
 
   const logout = async () => {
     await fetch("/api/admin/auth", { method: "DELETE" });
@@ -310,6 +341,46 @@ export default function AdminPortal() {
     }
   };
 
+  /** Optimistic so the pills respond instantly; reverted if the PATCH fails. */
+  const setEnquiryStatus = async (id: string, status: EnquiryStatus) => {
+    const previous = enquiries;
+    setEnquiries((prev) => prev.map((e) => (e.id === id ? { ...e, status } : e)));
+    try {
+      const res = await fetch(`/api/enquiries/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) throw new Error();
+      say("Statut mis à jour.");
+    } catch {
+      setEnquiries(previous);
+      say("Erreur lors de la mise à jour du statut.");
+    }
+  };
+
+  /** Resolves true when Resend accepted the reply, so the form can clear itself. */
+  const replyToEnquiry = async (id: string, body: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`/api/enquiries/${id}/reply`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ body }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        say(data.error || "L'envoi a échoué.");
+        return false;
+      }
+      say("Réponse envoyée.");
+      await loadEnquiries();
+      return true;
+    } catch {
+      say("L'envoi a échoué.");
+      return false;
+    }
+  };
+
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
     return paintings.filter((p) => {
@@ -341,7 +412,7 @@ export default function AdminPortal() {
   const openAdd = () => setDraft(emptyDraft());
 
   const [title, subtitle] = VIEW_TITLES[view];
-  const newInquiries = DEMO_INQUIRIES.filter((i) => i.status === "new").length;
+  const newInquiries = enquiries.filter((e) => e.status === "new").length;
 
   // Avoid flashing the desktop layout during the redirect off a phone.
   if (onPhone) {
@@ -401,6 +472,7 @@ export default function AdminPortal() {
             {view === "bord" && (
               <Bord
                 paintings={paintings}
+                enquiries={enquiries}
                 onView={setView}
                 onEdit={openEdit}
                 onOpenInquiry={(id) => {
@@ -431,9 +503,12 @@ export default function AdminPortal() {
             )}
             {view === "demandes" && (
               <Demandes
+                enquiries={enquiries}
                 paintings={paintings}
                 openId={openInquiryId}
                 onOpenId={setOpenInquiryId}
+                onStatus={setEnquiryStatus}
+                onReply={replyToEnquiry}
                 onToast={say}
               />
             )}
@@ -441,7 +516,8 @@ export default function AdminPortal() {
               <Collections paintings={paintings} onEdit={openEdit} />
             )}
             {view === "contenu" && <Contenu onToast={say} />}
-            {view === "analytique" && <Analytique paintings={paintings} />}
+            {view === "visites" && <Visites onToast={say} />}
+            {view === "expositions" && <Expositions onToast={say} />}
             {view === "medias" && (
               <Medias paintings={paintings} onAdd={openAdd} onEdit={openEdit} />
             )}

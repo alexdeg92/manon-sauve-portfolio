@@ -2,25 +2,31 @@
 
 import { Painting } from "@/data/paintings";
 import { catalogueValue, formatPrice } from "@/lib/mobile";
-import { DEMO_INQUIRIES } from "../demo-data";
+import { Enquiry } from "@/lib/enquiries";
 import { useSite } from "@/components/site/context";
 import Reveal from "@/components/site/Reveal";
 import PaintingImage from "@/components/site/PaintingImage";
-import DemoNote from "../DemoNote";
 import type { ScreenName } from "../nav";
 
 interface BordProps {
   paintings: Painting[];
+  enquiries: Enquiry[];
   onGoto: (screen: ScreenName) => void;
 }
 
-export default function Bord({ paintings, onGoto }: BordProps) {
+export default function Bord({ paintings, enquiries, onGoto }: BordProps) {
   const { lang, t } = useSite();
 
   const available = paintings.filter((p) => !p.sold).length;
   const sold = paintings.length - available;
   const value = catalogueValue(paintings);
-  const newCount = DEMO_INQUIRIES.filter((i) => i.status === "new").length;
+  const newCount = enquiries.filter((e) => e.status === "new").length;
+
+  const formatDate = (iso: string) =>
+    new Date(iso).toLocaleDateString(lang === "en" ? "en-CA" : "fr-CA", {
+      day: "numeric",
+      month: "long",
+    });
 
   return (
     <div className="animate-mFade">
@@ -29,9 +35,11 @@ export default function Bord({ paintings, onGoto }: BordProps) {
           {t("Aujourd'hui", "Today")}
         </h1>
         <p className="mt-1.5 font-editorial text-[15px] italic text-m-quiet">
-          {lang === "en"
-            ? `${newCount} new inquiries waiting.`
-            : `${newCount} nouvelles demandes en attente.`}
+          {enquiries.length === 0
+            ? t("Aucune demande pour le moment.", "No inquiries yet.")
+            : lang === "en"
+              ? `${newCount} new inquiries waiting.`
+              : `${newCount} nouvelles demandes en attente.`}
         </p>
       </div>
 
@@ -52,32 +60,49 @@ export default function Bord({ paintings, onGoto }: BordProps) {
               {t("Tout voir", "See all")}
             </button>
           </div>
-          <DemoNote />
-          <div className="mt-3 flex flex-col gap-2.5">
-            {DEMO_INQUIRIES.slice(0, 3).map((inquiry) => {
-              const painting = paintings.find((p) => p.id === inquiry.paintingId);
-              return (
-                <button
-                  key={inquiry.id}
-                  onClick={() => onGoto("demandes")}
-                  className={`flex w-full items-center gap-3.5 rounded-[16px] border border-m-line px-[18px] py-4 text-left ${
-                    inquiry.status === "closed" ? "opacity-60" : ""
-                  }`}
-                >
-                  <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-[10px] bg-m-sand">
-                    {painting && <PaintingImage src={painting.image} alt="" sizes="44px" />}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[15px]">{inquiry.name}</div>
-                    <div className="mt-0.5 truncate text-[12px] text-m-stone">
-                      {painting?.title ?? inquiry.kind[lang]} · {inquiry.subject[lang]}
+          {enquiries.length === 0 ? (
+            <p className="m-0 rounded-[16px] border border-m-line px-[18px] py-5 font-editorial text-[15px] italic leading-[1.6] text-m-stone">
+              {t(
+                "Les messages envoyés depuis le site apparaîtront ici.",
+                "Messages sent from the site will appear here."
+              )}
+            </p>
+          ) : (
+            <div className="mt-3 flex flex-col gap-2.5">
+              {enquiries.slice(0, 3).map((enquiry) => {
+                const painting = enquiry.paintingId
+                  ? paintings.find((p) => p.id === enquiry.paintingId)
+                  : undefined;
+                return (
+                  <button
+                    key={enquiry.id}
+                    onClick={() => onGoto("demandes")}
+                    className={`flex w-full items-center gap-3.5 rounded-[16px] border border-m-line px-[18px] py-4 text-left ${
+                      enquiry.status === "closed" ? "opacity-60" : ""
+                    }`}
+                  >
+                    <div className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-m-sand">
+                      {painting ? (
+                        <PaintingImage src={painting.image} alt="" sizes="44px" />
+                      ) : (
+                        <span className="font-editorial text-[15px] italic text-m-stone-soft">
+                          {enquiry.name.trim().charAt(0).toUpperCase()}
+                        </span>
+                      )}
                     </div>
-                  </div>
-                  <StatusPill status={inquiry.status} />
-                </button>
-              );
-            })}
-          </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[15px]">{enquiry.name}</div>
+                      <div className="mt-0.5 truncate text-[12px] text-m-stone">
+                        {enquiry.subject ?? t("Message", "Message")} ·{" "}
+                        {formatDate(enquiry.createdAt)}
+                      </div>
+                    </div>
+                    <StatusPill status={enquiry.status} />
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       </Reveal>
     </div>

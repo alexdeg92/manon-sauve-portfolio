@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import DemoTag from "../DemoTag";
 
 const DEFAULT_TITLE = "Figures, silhouettes et couleur";
 const DEFAULT_SUB =
@@ -26,10 +25,10 @@ export default function Contenu({ onToast }: { onToast: (message: string) => voi
         <div className="text-[13px] text-m-stone">
           Les modifications apparaissent à droite en direct.
         </div>
-        <DemoTag className="mt-4">
+        <div className="mt-4 rounded-[9px] border border-dashed border-m-line-strong bg-m-sand-soft px-3 py-2 text-[11px] leading-[1.5] text-m-stone">
           L&apos;enregistrement n&apos;est pas encore branché — ces textes vivent dans le code
-          pour l&apos;instant.
-        </DemoTag>
+          pour l&apos;instant. L&apos;aperçu ci-contre est réel.
+        </div>
 
         <Label>Titre d&apos;accueil</Label>
         <input

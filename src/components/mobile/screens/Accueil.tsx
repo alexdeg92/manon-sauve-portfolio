@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Painting } from "@/data/paintings";
 import { metaLine, priceLabel } from "@/lib/mobile";
 import { useSite } from "@/components/site/context";
@@ -48,24 +49,8 @@ export default function Accueil({ paintings, onOpenWork, onGoto }: AccueilProps)
       </div>
 
       {featured && (
-        <Reveal className="mx-6 mt-[22px]">
-          <button
-            onClick={() => onOpenWork(featured)}
-            className="relative block aspect-[4/5] w-full overflow-hidden rounded-[20px] bg-m-sand text-left"
-          >
-            {/* No `priority`: both breakpoint trees stay mounted, and an
-                eager image would download in the hidden one too. */}
-            <PaintingImage src={featured.image} alt={featured.title} sizes="100vw" />
-            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-m-ink/[.82] to-transparent px-[22px] pb-[22px] pt-[70px] text-m-paper">
-              <div className="text-[10px] uppercase tracking-[.2em] text-m-sage-pale">
-                {t("Œuvre à l'honneur", "Featured work")}
-              </div>
-              <div className="mt-1.5 font-editorial text-[28px] italic">{featured.title}</div>
-              <div className="mt-1 text-[13px] text-[#D6D2C9]">
-                {metaLine(featured)} · {priceLabel(featured, lang)}
-              </div>
-            </div>
-          </button>
+        <Reveal className="mt-[18px]">
+          <FeaturedRotator paintings={paintings} onOpenWork={onOpenWork} />
         </Reveal>
       )}
 
@@ -142,5 +127,83 @@ function Stat({ value, label }: { value: string; label: string }) {
       <div className="text-[24px] tracking-[-.02em]">{value}</div>
       <div className="mt-1 text-[10px] uppercase tracking-[.14em] text-m-stone">{label}</div>
     </div>
+  );
+}
+
+const ROTATION_MS = 2500;
+const MAX_SLIDES = 6;
+
+/**
+ * Cross-fades the featured work every 2.5s. Slides are only mounted once they
+ * have been shown, so the first paint still downloads a single hero image
+ * instead of all of them, and the rotation holds still for anyone who asked for
+ * reduced motion.
+ */
+function FeaturedRotator({
+  paintings,
+  onOpenWork,
+}: {
+  paintings: Painting[];
+  onOpenWork: (painting: Painting) => void;
+}) {
+  const { lang, t } = useSite();
+  const slides = paintings.slice(0, MAX_SLIDES);
+  const [index, setIndex] = useState(0);
+  const [mounted, setMounted] = useState<number[]>([0]);
+
+  useEffect(() => {
+    if (slides.length < 2) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const timer = setInterval(
+      () => setIndex((current) => (current + 1) % slides.length),
+      ROTATION_MS
+    );
+    return () => clearInterval(timer);
+  }, [slides.length]);
+
+  useEffect(() => {
+    setMounted((current) => (current.includes(index) ? current : [...current, index]));
+  }, [index]);
+
+  const current = slides[index];
+  if (!current) return null;
+
+  return (
+    <button
+      onClick={() => onOpenWork(current)}
+      /* Fills the screen below the greeting, minus the floating tab bar. `svh`
+         rather than `vh` so mobile browser chrome does not crop it. */
+      className="relative block h-[calc(100svh-172px)] min-h-[440px] w-full overflow-hidden bg-m-sand text-left"
+    >
+      {slides.map((painting, i) => (
+        <div
+          key={painting.id}
+          aria-hidden={i !== index}
+          className={`absolute inset-0 transition-all duration-[700ms] ease-out ${
+            i === index ? "translate-x-0 opacity-100" : "translate-x-4 opacity-0"
+          }`}
+        >
+          {/* No `priority`: both breakpoint trees stay mounted, and an
+              eager image would download in the hidden one too. */}
+          {mounted.includes(i) && (
+            <PaintingImage src={painting.image} alt={painting.title} sizes="100vw" />
+          )}
+        </div>
+      ))}
+
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-m-ink/[.88] via-m-ink/40 to-transparent px-6 pb-7 pt-[110px] text-m-paper">
+        <div className="text-[10px] uppercase tracking-[.2em] text-m-sage-pale">
+          {t("Œuvre à l'honneur", "Featured work")}
+        </div>
+        {/* Keyed so the caption re-enters with the image rather than snapping. */}
+        <div key={current.id} className="animate-mFade">
+          <div className="mt-2 font-editorial text-[32px] leading-[1.15] italic">{current.title}</div>
+          <div className="mt-1 text-[13px] text-[#D6D2C9]">
+            {metaLine(current)} · {priceLabel(current, lang)}
+          </div>
+        </div>
+      </div>
+    </button>
   );
 }

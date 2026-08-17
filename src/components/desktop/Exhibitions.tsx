@@ -1,11 +1,34 @@
 "use client";
 
-import { EXHIBITIONS } from "./demo-data";
+import { useEffect, useState } from "react";
+import { Exhibition, localized } from "@/lib/exhibitions";
 import { useSite } from "@/components/site/context";
 import Reveal from "@/components/site/Reveal";
 
+/**
+ * Reads the exhibitions Manon enters in the admin. The whole section is hidden
+ * while the list is empty rather than showing placeholder shows to visitors.
+ */
 export default function Exhibitions() {
   const { lang, t } = useSite();
+  const [shows, setShows] = useState<Exhibition[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/exhibitions")
+      .then((res) => res.json())
+      .then((data) => {
+        if (active && Array.isArray(data)) setShows(data);
+      })
+      .catch(() => {
+        // Nothing to show is the correct fallback here.
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (shows.length === 0) return null;
 
   return (
     <section id="expositions" className="mt-[150px] bg-m-ink px-14 py-[120px] text-m-paper">
@@ -28,20 +51,22 @@ export default function Exhibitions() {
           </div>
 
           <div>
-            {EXHIBITIONS.map((show, i) => (
-              <Reveal key={`${show.year}-${show.title}`} index={i}>
+            {shows.map((show, i) => (
+              <Reveal key={show.id} index={i}>
                 <div
                   className={`grid grid-cols-[82px_1fr_150px] items-baseline gap-[26px] border-t border-[#33352F] py-6 ${
-                    i === EXHIBITIONS.length - 1 ? "border-b" : ""
+                    i === shows.length - 1 ? "border-b" : ""
                   }`}
                 >
                   <span className="text-[14px] text-[#9DB3A1]">{show.year}</span>
                   <div>
                     <div className="font-editorial text-[23px] italic">{show.title}</div>
-                    <div className="mt-1.5 text-[13px] text-[#B5B1A8]">{show.venue[lang]}</div>
+                    <div className="mt-1.5 text-[13px] text-[#B5B1A8]">
+                      {localized(show.venueFr, show.venueEn, lang)}
+                    </div>
                   </div>
                   <span className="text-right text-[11px] uppercase tracking-[.16em] text-m-quiet">
-                    {show.kind[lang]}
+                    {localized(show.kindFr, show.kindEn, lang)}
                   </span>
                 </div>
               </Reveal>

@@ -1,7 +1,7 @@
 "use client";
 
 import { Painting } from "@/data/paintings";
-import { DEMO_ANALYTICS, DEMO_COLLECTIONS } from "../demo-data";
+import { collectionOf } from "@/lib/mobile";
 import { useSite } from "@/components/site/context";
 import Reveal from "@/components/site/Reveal";
 import type { ScreenName } from "../nav";
@@ -17,18 +17,44 @@ export default function Gestion({
 }) {
   const { lang, t } = useSite();
 
+  // Collections are derived from the works themselves, so the count is real.
+  const seriesCount = new Set(paintings.map((p) => collectionOf(p, lang))).size;
+
   const rows: { screen: ScreenName; title: string; subtitle: string; icon: React.ReactNode }[] = [
     {
       screen: "collections",
       title: t("Collections", "Collections"),
       subtitle:
         lang === "en"
-          ? `${DEMO_COLLECTIONS.length} series`
-          : `${DEMO_COLLECTIONS.length} séries`,
+          ? `${seriesCount} ${seriesCount === 1 ? "series" : "series"}`
+          : `${seriesCount} ${seriesCount === 1 ? "série" : "séries"}`,
       icon: (
         <>
           <rect x="3" y="7" width="18" height="13" rx="2" />
           <path d="M6 7V5h12v2M6 11h12" />
+        </>
+      ),
+    },
+    {
+      screen: "visites",
+      title: t("Visites d'atelier", "Studio visits"),
+      subtitle: t("Jours et heures offerts", "Days and times offered"),
+      icon: (
+        <>
+          <rect x="3.5" y="4.5" width="17" height="16" rx="2" />
+          <path d="M3.5 9.5h17M8 3v3M16 3v3" />
+          <circle cx="12" cy="14.5" r="1.6" />
+        </>
+      ),
+    },
+    {
+      screen: "expositions",
+      title: t("Expositions", "Exhibitions"),
+      subtitle: t("Expositions et presse", "Shows and press"),
+      icon: (
+        <>
+          <path d="M4 5h16M6 5v9a3 3 0 0 0 3 3h6a3 3 0 0 0 3-3V5" />
+          <path d="M12 17v3M9 20h6" />
         </>
       ),
     },
@@ -40,20 +66,6 @@ export default function Gestion({
         <>
           <path d="M5 4h14v16H5z" />
           <path d="M8 8h8M8 12h8M8 16h5" />
-        </>
-      ),
-    },
-    {
-      screen: "analytique",
-      title: t("Analytique", "Analytics"),
-      subtitle:
-        lang === "en"
-          ? `${DEMO_ANALYTICS.visits} visits this month`
-          : `${DEMO_ANALYTICS.visits} visites ce mois-ci`,
-      icon: (
-        <>
-          <path d="M4 16.5 9.5 11l3.5 3.5L20 7" />
-          <path d="M20 12V7h-5" />
         </>
       ),
     },

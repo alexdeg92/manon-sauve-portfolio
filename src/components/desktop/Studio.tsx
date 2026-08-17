@@ -1,32 +1,19 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Painting } from "@/data/paintings";
 import { useSite } from "@/components/site/context";
+import {
+  Availability,
+  DEFAULT_AVAILABILITY,
+  formatSlotTime,
+  upcomingVisitDays,
+} from "@/lib/availability";
 import Reveal from "@/components/site/Reveal";
 import PaintingImage from "@/components/site/PaintingImage";
 
 type Status = { tone: "ok" | "error"; text: string } | null;
 
-/** The next four days the studio takes visitors, from today. */
-function upcomingDays(lang: "fr" | "en") {
-  const locale = lang === "en" ? "en-CA" : "fr-CA";
-  return [1, 2, 3, 4].map((offset) => {
-    const date = new Date();
-    date.setDate(date.getDate() + offset);
-    return {
-      key: date.toISOString().slice(0, 10),
-      label: date.toLocaleDateString(locale, { weekday: "short", day: "numeric", month: "short" }),
-    };
-  });
-}
-
-const TIMES = [
-  { key: "10:00", fr: "10 h 00", en: "10:00 am" },
-  { key: "13:30", fr: "13 h 30", en: "1:30 pm" },
-  { key: "15:00", fr: "15 h 00", en: "3:00 pm" },
-  { key: "17:30", fr: "17 h 30", en: "5:30 pm" },
-];
 
 export default function Studio({ paintings }: { paintings: Painting[] }) {
   const { lang, t } = useSite();
@@ -34,14 +21,34 @@ export default function Studio({ paintings }: { paintings: Painting[] }) {
   const [time, setTime] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [status, setStatus] = useState<Status>(null);
   const [sending, setSending] = useState(false);
 
-  const days = useMemo(() => upcomingDays(lang), [lang]);
+  // Which days and times are offered is set in the admin, so read it rather
+  // than assuming a fixed weekly shape.
+  const [availability, setAvailability] = useState<Availability>(DEFAULT_AVAILABILITY);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/availability")
+      .then((res) => res.json())
+      .then((data) => {
+        if (active) setAvailability(data);
+      })
+      .catch(() => {
+        // Keep the defaults rather than showing an empty form.
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const days = useMemo(() => upcomingVisitDays(availability, lang), [availability, lang]);
   const cover = paintings.find((p) => p.id === "abstrait-feu") ?? paintings[0];
 
   const dayLabel = days.find((d) => d.key === day)?.label ?? "";
-  const timeLabel = TIMES.find((s) => s.key === time)?.[lang] ?? "";
+  const timeLabel = time ? formatSlotTime(time, lang) : "";
 
   const submit = async () => {
     if (!day || !time) {
@@ -69,7 +76,7 @@ export default function Studio({ paintings }: { paintings: Painting[] }) {
         body: JSON.stringify({
           name: name.trim(),
           email: email.trim(),
-          phone: "Non fourni",
+          phone: phone.trim(),
           message: `Demande de visite d'atelier — ${dayLabel} à ${timeLabel}.`,
           painting: "Visite d'atelier",
         }),
@@ -143,9 +150,9 @@ export default function Studio({ paintings }: { paintings: Painting[] }) {
                 {t("2 · Choisir une heure", "2 · Pick a time")}
               </div>
               <div className="mt-3.5 flex flex-wrap gap-2">
-                {TIMES.map((s) => (
-                  <Slot key={s.key} active={time === s.key} onClick={() => setTime(s.key)}>
-                    {s[lang]}
+                {availability.times.map((slot) => (
+                  <Slot key={slot} active={time === slot} onClick={() => setTime(slot)}>
+                    {formatSlotTime(slot, lang)}
                   </Slot>
                 ))}
               </div>
@@ -165,6 +172,14 @@ export default function Studio({ paintings }: { paintings: Painting[] }) {
                   type="email"
                   autoComplete="email"
                   className="rounded border border-[#D8D3C8] bg-transparent px-4 py-3.5 text-[14px] outline-none focus:border-m-sage"
+                />
+                <input
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder={t("Téléphone (optionnel)", "Phone (optional)")}
+                  type="tel"
+                  autoComplete="tel"
+                  className="col-span-2 rounded border border-[#D8D3C8] bg-transparent px-4 py-3.5 text-[14px] outline-none focus:border-m-sage"
                 />
               </div>
 

@@ -1,6 +1,5 @@
 "use client";
 
-import { DEMO_INQUIRIES } from "./demo-data";
 import { useSite } from "@/components/site/context";
 import { Mode, ScreenName } from "./nav";
 
@@ -9,6 +8,7 @@ interface TabBarProps {
   activeTab: ScreenName;
   tabs: ScreenName[];
   showModeSwitch: boolean;
+  newInquiries: number;
   onModeChange: (mode: Mode) => void;
   onTabChange: (screen: ScreenName) => void;
 }
@@ -18,11 +18,11 @@ export default function TabBar({
   activeTab,
   tabs,
   showModeSwitch,
+  newInquiries,
   onModeChange,
   onTabChange,
 }: TabBarProps) {
   const { t } = useSite();
-  const newInquiries = DEMO_INQUIRIES.filter((i) => i.status === "new").length;
 
   const label: Record<ScreenName, string> = {
     accueil: t("Accueil", "Home"),
@@ -34,8 +34,9 @@ export default function TabBar({
     demandes: t("Demandes", "Inbox"),
     gestion: t("Gestion", "Manage"),
     collections: t("Collections", "Collections"),
+    visites: t("Visites", "Visits"),
+    expositions: t("Expositions", "Exhibitions"),
     contenu: t("Contenu", "Content"),
-    analytique: t("Analytique", "Analytics"),
     medias: t("Médias", "Media"),
   };
 
