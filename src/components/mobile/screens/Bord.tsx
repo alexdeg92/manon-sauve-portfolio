@@ -118,18 +118,29 @@ function Tile({ value, label, accent }: { value: string; label: string; accent?:
   );
 }
 
-export function StatusPill({ status }: { status: "new" | "replied" | "closed" }) {
+export function StatusPill({
+  status,
+  unread,
+}: {
+  status: "new" | "replied" | "closed";
+  /** Shown instead of the status, because it is what a swipe changes. */
+  unread?: boolean;
+}) {
   const { t } = useSite();
-  const styles = {
-    new: "text-m-sage border-m-sage-soft",
-    replied: "text-m-stone border-m-line-strong",
-    closed: "text-m-stone-soft border-[#EFEAE0]",
-  }[status];
-  const label = {
-    new: t("Nouveau", "New"),
-    replied: t("Répondu", "Replied"),
-    closed: t("Clos", "Closed"),
-  }[status];
+  const styles = unread
+    ? "text-m-sage border-m-sage-soft"
+    : {
+        new: "text-m-sage border-m-sage-soft",
+        replied: "text-m-stone border-m-line-strong",
+        closed: "text-m-stone-soft border-[#EFEAE0]",
+      }[status];
+  const label = unread
+    ? t("Non lue", "Unread")
+    : {
+        new: t("Nouveau", "New"),
+        replied: t("Répondu", "Replied"),
+        closed: t("Clos", "Closed"),
+      }[status];
 
   return (
     <span

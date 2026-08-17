@@ -15,6 +15,7 @@ interface DemandesProps {
   enquiries: EnquiryWithThread[];
   paintings: Painting[];
   onStatus: (id: string, status: EnquiryStatus) => Promise<void>;
+  onRead: (id: string, read: boolean) => Promise<void>;
   onReply: (id: string, body: string) => Promise<boolean>;
   onDelete: (id: string) => Promise<void>;
 }
@@ -23,6 +24,7 @@ export default function Demandes({
   enquiries,
   paintings,
   onStatus,
+  onRead,
   onReply,
   onDelete,
 }: DemandesProps) {
@@ -57,7 +59,7 @@ export default function Demandes({
     }
   };
 
-  const waiting = enquiries.filter((e) => e.status === "new").length;
+  const unread = enquiries.filter((e) => !e.readAt).length;
 
   return (
     <div className="animate-mFade">
@@ -69,8 +71,8 @@ export default function Demandes({
           {enquiries.length === 0
             ? t("Aucune demande pour le moment.", "No inquiries yet.")
             : lang === "en"
-              ? `${waiting} still waiting for a reply.`
-              : `${waiting} sont encore sans réponse.`}
+              ? `${unread} unread.`
+              : `${unread} non lue${unread === 1 ? "" : "s"}.`}
         </p>
       </div>
 
@@ -124,8 +126,10 @@ export default function Demandes({
                 return (
                   <SwipeRow
                     key={enquiry.id}
-                    rightActionLabel={t("Non lue", "Unread")}
-                    onSwipeRight={() => onStatus(enquiry.id, "new")}
+                    rightActionLabel={
+                      enquiry.readAt ? t("Non lue", "Unread") : t("Lue", "Read")
+                    }
+                    onSwipeRight={() => onRead(enquiry.id, !enquiry.readAt)}
                     leftActionLabel={t("Supprimer", "Delete")}
                     onSwipeLeft={() => onDelete(enquiry.id)}
                     destructive="left"
@@ -146,13 +150,24 @@ export default function Demandes({
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-[15px]">{enquiry.name}</div>
+                      <div className="flex items-center gap-2">
+                        {!enquiry.readAt && (
+                          <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-m-sage" />
+                        )}
+                        <span
+                          className={`truncate text-[15px] ${
+                            enquiry.readAt ? "" : "font-medium"
+                          }`}
+                        >
+                          {enquiry.name}
+                        </span>
+                      </div>
                       <div className="mt-0.5 truncate text-[12px] text-m-stone">
                         {enquiry.subject ?? t("Message", "Message")} ·{" "}
                         {formatDate(enquiry.createdAt)}
                       </div>
                     </div>
-                    <StatusPill status={enquiry.status} />
+                    <StatusPill status={enquiry.status} unread={!enquiry.readAt} />
                   </button>
                   </SwipeRow>
                 );

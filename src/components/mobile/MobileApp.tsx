@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Painting } from "@/data/paintings";
 import { EnquiryStatus, EnquiryWithThread } from "@/lib/enquiries";
 import { useSite } from "@/components/site/context";
@@ -38,6 +38,8 @@ export default function MobileApp({ paintings, onPaintingUpdated }: MobileAppPro
     painting: null,
   });
   const [enquiries, setEnquiries] = useState<EnquiryWithThread[]>([]);
+  /** See AdminPortal: a poll mid-write would undo the change on screen. */
+  const pendingWrites = useRef(0);
 
   // The session cookie is httpOnly, so the server decides whether the artist
   // mode is offered at all. A failed check simply leaves it hidden.
@@ -49,6 +51,7 @@ export default function MobileApp({ paintings, onPaintingUpdated }: MobileAppPro
   }, []);
 
   const loadEnquiries = useCallback(async () => {
+    if (pendingWrites.current > 0) return;
     try {
       const res = await fetch("/api/enquiries");
       if (!res.ok) return;
@@ -85,6 +88,7 @@ export default function MobileApp({ paintings, onPaintingUpdated }: MobileAppPro
   /** Optimistic so the pills respond instantly; reverted if the PATCH fails. */
   const setEnquiryStatus = useCallback(
     async (id: string, status: EnquiryStatus) => {
+      pendingWrites.current += 1;
       let previous: EnquiryWithThread[] = [];
       setEnquiries((prev) => {
         previous = prev;
@@ -101,6 +105,8 @@ export default function MobileApp({ paintings, onPaintingUpdated }: MobileAppPro
       } catch {
         setEnquiries(previous);
         say(t("Erreur lors de la mise à jour.", "Could not update the status."));
+      } finally {
+        pendingWrites.current -= 1;
       }
     },
     [say, t]
@@ -130,8 +136,38 @@ export default function MobileApp({ paintings, onPaintingUpdated }: MobileAppPro
     [loadEnquiries, say, t]
   );
 
+  /** Takes the target state, not a flip, so a stale row cannot invert it. */
+  const setEnquiryRead = useCallback(
+    async (id: string, read: boolean) => {
+      pendingWrites.current += 1;
+      let previous: EnquiryWithThread[] = [];
+      setEnquiries((prev) => {
+        previous = prev;
+        return prev.map((e) =>
+          e.id === id ? { ...e, readAt: read ? new Date().toISOString() : null } : e
+        );
+      });
+      try {
+        const res = await fetch(`/api/enquiries/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ read }),
+        });
+        if (!res.ok) throw new Error();
+        say(read ? t("Marquée lue.", "Marked read.") : t("Marquée non lue.", "Marked unread."));
+      } catch {
+        setEnquiries(previous);
+        say(t("Erreur lors de la mise à jour.", "Could not update."));
+      } finally {
+        pendingWrites.current -= 1;
+      }
+    },
+    [say, t]
+  );
+
   const deleteEnquiry = useCallback(
     async (id: string) => {
+      pendingWrites.current += 1;
       let previous: EnquiryWithThread[] = [];
       setEnquiries((prev) => {
         previous = prev;
@@ -144,6 +180,8 @@ export default function MobileApp({ paintings, onPaintingUpdated }: MobileAppPro
       } catch {
         setEnquiries(previous);
         say(t("Erreur lors de la suppression.", "Could not delete."));
+      } finally {
+        pendingWrites.current -= 1;
       }
     },
     [say, t]
@@ -205,6 +243,7 @@ export default function MobileApp({ paintings, onPaintingUpdated }: MobileAppPro
             enquiries={enquiries}
             paintings={paintings}
             onStatus={setEnquiryStatus}
+            onRead={setEnquiryRead}
             onReply={replyToEnquiry}
             onDelete={deleteEnquiry}
           />
@@ -246,7 +285,7 @@ export default function MobileApp({ paintings, onPaintingUpdated }: MobileAppPro
         activeTab={activeTab}
         tabs={mode === "artiste" ? ARTIST_TABS : VISITOR_TABS}
         showModeSwitch={isAdmin}
-        newInquiries={enquiries.filter((e) => e.status === "new").length}
+        newInquiries={enquiries.filter((e) => !e.readAt).length}
         onModeChange={(next) => goto(next === "artiste" ? "bord" : "accueil")}
         onTabChange={goto}
       />

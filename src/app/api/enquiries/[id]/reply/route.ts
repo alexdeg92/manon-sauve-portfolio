@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { isAuthed } from '@/lib/paintings-storage'
-import { addMessage, getEnquiry, markReplied } from '@/lib/enquiries'
+import { addMessage, getEnquiry, markReplied, setEnquiryRead } from '@/lib/enquiries'
 import { CONTACT_FROM, CONTACT_INBOX, emailShell, escapeHtml, getResend } from '@/lib/mailer'
 
 export const dynamic = 'force-dynamic'
@@ -58,6 +58,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
     await addMessage({ enquiryId: params.id, direction: 'outbound', body: reply })
     await markReplied(params.id)
+    // Answering it is the strongest possible signal that it has been read.
+    await setEnquiryRead(params.id, true)
     return NextResponse.json({ ok: true })
   } catch (err) {
     console.error('POST /api/enquiries/[id]/reply error:', err)
