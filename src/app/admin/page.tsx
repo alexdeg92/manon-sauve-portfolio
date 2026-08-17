@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import AdminDashboard from "./AdminDashboard";
+import AdminPortal from "@/components/admin/AdminPortal";
 
 export default function AdminPage() {
   const cookieStore = cookies();
@@ -11,5 +11,5 @@ export default function AdminPage() {
     redirect("/admin/login");
   }
 
-  return <AdminDashboard />;
+  return <AdminPortal />;
 }

@@ -1,21 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Navbar from "@/components/Navbar";
-import Hero from "@/components/Hero";
-import Gallery from "@/components/Gallery";
-import About from "@/components/About";
-import Contact from "@/components/Contact";
-import ContactModal from "@/components/ContactModal";
-import Footer from "@/components/Footer";
+import { useCallback, useState, useEffect } from "react";
+import { SiteProvider } from "@/components/site/context";
+import MobileApp from "@/components/mobile/MobileApp";
+import DesktopSite from "@/components/desktop/DesktopSite";
 import { Painting, paintings as staticPaintings } from "@/data/paintings";
 
 export default function Home() {
-  const [selectedPainting, setSelectedPainting] = useState<Painting | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
   const [paintings, setPaintings] = useState<Painting[]>(staticPaintings);
 
-  // Fetch latest paintings from KV (admin-managed), fallback to static if KV empty/error
+  // Fetch latest paintings from the database (admin-managed), fallback to static
   useEffect(() => {
     fetch("/api/paintings")
       .then((res) => res.json())
@@ -30,31 +24,20 @@ export default function Home() {
       });
   }, []);
 
-  const handleSelectPainting = (painting: Painting) => {
-    setSelectedPainting(painting);
-    setModalOpen(true);
-  };
-
-  const handleOpenContact = () => {
-    setSelectedPainting(null);
-    setModalOpen(true);
-  };
+  // The mobile artist mode edits prices and availability in place.
+  const handlePaintingUpdated = useCallback((updated: Painting) => {
+    setPaintings((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+  }, []);
 
   return (
-    <>
-      <Navbar />
-      <main>
-        <Hero />
-        <Gallery paintings={paintings} onSelect={handleSelectPainting} />
-        <About />
-        <Contact onOpenContact={handleOpenContact} />
-      </main>
-      <Footer />
-      <ContactModal
-        painting={selectedPainting}
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-      />
-    </>
+    // One provider so the FR/EN choice survives a resize across the breakpoint.
+    <SiteProvider>
+      <div className="md:hidden">
+        <MobileApp paintings={paintings} onPaintingUpdated={handlePaintingUpdated} />
+      </div>
+      <div className="hidden md:block">
+        <DesktopSite paintings={paintings} />
+      </div>
+    </SiteProvider>
   );
 }
