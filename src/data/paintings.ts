@@ -7,6 +7,10 @@ export interface Painting {
   image: string;
   year: number;
   sold?: boolean;
+  /** Series this work belongs to. Falls back to a derived group when unset. */
+  collection?: string | null;
+  /** Studio note shown on the work's detail view. */
+  note?: string | null;
 }
 
 export const paintings: Painting[] = [

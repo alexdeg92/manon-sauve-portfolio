@@ -1,10 +1,18 @@
-import { supabase } from './supabase'
+import { getSql } from './db'
 
 export async function getSetting(key: string): Promise<string | null> {
-  const { data } = await supabase.from('settings').select('value').eq('key', key).single()
-  return data?.value ?? null
+  try {
+    const rows = await getSql()`SELECT value FROM settings WHERE key = ${key}`
+    return rows[0]?.value ?? null
+  } catch (err) {
+    console.error('getSetting error:', err)
+    return null
+  }
 }
 
 export async function setSetting(key: string, value: string): Promise<void> {
-  await supabase.from('settings').upsert({ key, value })
+  await getSql()`
+    INSERT INTO settings (key, value) VALUES (${key}, ${value})
+    ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+  `
 }

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { adminLandingPath } from "@/lib/admin-target";
 
 export default function LoginPage() {
   const [password, setPassword] = useState("");
@@ -21,7 +22,8 @@ export default function LoginPage() {
     });
 
     if (res.ok) {
-      router.push("/admin");
+      // Phones get the artist mode on the home page, not the desktop portal.
+      router.push(adminLandingPath());
       router.refresh();
     } else {
       setError("Mot de passe incorrect. Réessayez.");

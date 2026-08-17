@@ -1,4 +1,17 @@
 import { NextResponse } from "next/server";
+import { isAuthed } from "@/lib/paintings-storage";
+
+export const dynamic = "force-dynamic";
+
+// The session cookie is httpOnly, so the client asks the server whether it is
+// signed in. The mobile view uses this to decide if the artist mode is offered.
+export async function GET(req: Request) {
+  const cookie = req.headers.get("cookie") || "";
+  return NextResponse.json(
+    { authed: isAuthed(cookie) },
+    { headers: { "Cache-Control": "no-store" } }
+  );
+}
 
 export async function POST(req: Request) {
   try {

@@ -31,9 +31,12 @@ export async function POST(req: Request) {
       title: body.title,
       medium: body.medium,
       dimensions: body.dimensions,
-      price: Number(body.price),
+      price: body.price === null || body.price === "" ? null : Number(body.price),
       image: body.image,
       year: Number(body.year),
+      sold: Boolean(body.sold),
+      collection: body.collection || null,
+      note: body.note || null,
     };
 
     paintings.unshift(newPainting);

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getPaintings, savePaintings, isAuthed } from "@/lib/paintings-storage";
+import { getPaintings, savePaintings, deletePainting, isAuthed } from "@/lib/paintings-storage";
 
 export async function PUT(
   req: Request,
@@ -34,6 +34,8 @@ export async function PUT(
       image: body.image ?? paintings[idx].image,
       year: body.year !== undefined ? Number(body.year) : paintings[idx].year,
       sold: body.sold !== undefined ? Boolean(body.sold) : paintings[idx].sold,
+      collection: body.collection !== undefined ? body.collection || null : paintings[idx].collection,
+      note: body.note !== undefined ? body.note || null : paintings[idx].note,
     };
 
     await savePaintings(paintings);
@@ -54,14 +56,12 @@ export async function DELETE(
   }
 
   try {
-    const paintings = await getPaintings();
-    const filtered = paintings.filter((p) => p.id !== params.id);
+    const deleted = await deletePainting(params.id);
 
-    if (filtered.length === paintings.length) {
+    if (!deleted) {
       return NextResponse.json({ error: "Tableau non trouvé" }, { status: 404 });
     }
 
-    await savePaintings(filtered);
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("DELETE /api/paintings/[id] error:", err);
