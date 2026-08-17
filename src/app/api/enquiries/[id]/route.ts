@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server'
 import { isAuthed } from '@/lib/paintings-storage'
-import { deleteEnquiry, isEnquiryStatus, setEnquiryStatus } from '@/lib/enquiries'
+import {
+  deleteEnquiry,
+  isEnquiryStatus,
+  setEnquiryRead,
+  setEnquiryStatus,
+} from '@/lib/enquiries'
 
 export const dynamic = 'force-dynamic'
 export const fetchCache = 'force-no-store'
@@ -11,7 +16,17 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   }
 
   try {
-    const { status } = await req.json()
+    const { status, read } = await req.json()
+
+    // Read state and conversation status are separate concerns, so the route
+    // takes either one.
+    if (typeof read === 'boolean') {
+      const marked = await setEnquiryRead(params.id, read)
+      if (!marked) {
+        return NextResponse.json({ error: 'Demande non trouvée' }, { status: 404 })
+      }
+      return NextResponse.json({ ok: true })
+    }
 
     if (!isEnquiryStatus(status)) {
       return NextResponse.json({ error: 'Statut invalide' }, { status: 400 })

@@ -48,6 +48,12 @@ export default function AdminPortal() {
   const [uploadingProfile, setUploadingProfile] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout>>();
+  /**
+   * Number of writes in flight. The background refresh skips while this is above
+   * zero: a poll that started before a PATCH landed would return the old row and
+   * visually undo the change the user just made.
+   */
+  const pendingWrites = useRef(0);
 
   const say = useCallback((message: string) => {
     setToast(message);
@@ -70,6 +76,7 @@ export default function AdminPortal() {
   }, [say]);
 
   const loadEnquiries = useCallback(async () => {
+    if (pendingWrites.current > 0) return;
     try {
       const res = await fetch("/api/enquiries");
       if (!res.ok) return;
@@ -341,9 +348,43 @@ export default function AdminPortal() {
     }
   };
 
+  const markEnquiryRead = async (id: string, read: boolean) => {
+    const previous = enquiries;
+    pendingWrites.current += 1;
+    setEnquiries((prev) =>
+      prev.map((e) =>
+        e.id === id ? { ...e, readAt: read ? new Date().toISOString() : null } : e
+      )
+    );
+    try {
+      const res = await fetch(`/api/enquiries/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ read }),
+      });
+      if (!res.ok) throw new Error();
+    } catch {
+      setEnquiries(previous);
+    } finally {
+      pendingWrites.current -= 1;
+    }
+  };
+
+  /**
+   * Opening an enquiry marks it read, which is what makes the sidebar count
+   * drain. Only a deliberate click does this: the panel's auto-selected first
+   * row must not silently clear the badge.
+   */
+  const openEnquiry = (id: string) => {
+    setOpenInquiryId(id);
+    const target = enquiries.find((e) => e.id === id);
+    if (target && !target.readAt) markEnquiryRead(id, true);
+  };
+
   /** Optimistic so the pills respond instantly; reverted if the PATCH fails. */
   const setEnquiryStatus = async (id: string, status: EnquiryStatus) => {
     const previous = enquiries;
+    pendingWrites.current += 1;
     setEnquiries((prev) => prev.map((e) => (e.id === id ? { ...e, status } : e)));
     try {
       const res = await fetch(`/api/enquiries/${id}`, {
@@ -356,6 +397,8 @@ export default function AdminPortal() {
     } catch {
       setEnquiries(previous);
       say("Erreur lors de la mise à jour du statut.");
+    } finally {
+      pendingWrites.current -= 1;
     }
   };
 
@@ -412,7 +455,8 @@ export default function AdminPortal() {
   const openAdd = () => setDraft(emptyDraft());
 
   const [title, subtitle] = VIEW_TITLES[view];
-  const newInquiries = enquiries.filter((e) => e.status === "new").length;
+  // Inbox badge counts unread, which is independent of conversation status.
+  const newInquiries = enquiries.filter((e) => !e.readAt).length;
 
   // Avoid flashing the desktop layout during the redirect off a phone.
   if (onPhone) {
@@ -476,7 +520,7 @@ export default function AdminPortal() {
                 onView={setView}
                 onEdit={openEdit}
                 onOpenInquiry={(id) => {
-                  setOpenInquiryId(id);
+                  openEnquiry(id);
                   setView("demandes");
                 }}
               />
@@ -506,7 +550,8 @@ export default function AdminPortal() {
                 enquiries={enquiries}
                 paintings={paintings}
                 openId={openInquiryId}
-                onOpenId={setOpenInquiryId}
+                onOpenId={openEnquiry}
+                onRead={markEnquiryRead}
                 onStatus={setEnquiryStatus}
                 onReply={replyToEnquiry}
                 onToast={say}

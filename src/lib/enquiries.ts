@@ -20,6 +20,8 @@ export interface Enquiry {
   status: EnquiryStatus
   createdAt: string
   repliedAt: string | null
+  /** null means unread. Independent of `status`. */
+  readAt: string | null
 }
 
 export async function listEnquiries(): Promise<Enquiry[]> {
@@ -27,7 +29,8 @@ export async function listEnquiries(): Promise<Enquiry[]> {
     const rows = await getSql()`
       SELECT id, name, email, phone, message, subject,
              painting_id AS "paintingId", status,
-             created_at AS "createdAt", replied_at AS "repliedAt"
+             created_at AS "createdAt", replied_at AS "repliedAt",
+           read_at AS "readAt"
       FROM enquiries
       ORDER BY created_at DESC
     `
@@ -52,7 +55,8 @@ export async function getEnquiry(id: string): Promise<Enquiry | null> {
   const rows = await getSql()`
     SELECT id, name, email, phone, message, subject,
            painting_id AS "paintingId", status,
-           created_at AS "createdAt", replied_at AS "repliedAt"
+           created_at AS "createdAt", replied_at AS "repliedAt",
+           read_at AS "readAt"
     FROM enquiries
     WHERE id = ${id}
   `
@@ -104,7 +108,8 @@ export async function createEnquiry(input: NewEnquiry): Promise<Enquiry> {
             ${input.message}, ${subject}, ${paintingId})
     RETURNING id, name, email, phone, message, subject,
               painting_id AS "paintingId", status,
-              created_at AS "createdAt", replied_at AS "repliedAt"
+              created_at AS "createdAt", replied_at AS "repliedAt",
+           read_at AS "readAt"
   `
   return rows[0] as Enquiry
 }
@@ -218,7 +223,8 @@ export async function findEnquiryByEmail(email: string): Promise<Enquiry | null>
   const rows = await getSql()`
     SELECT id, name, email, phone, message, subject,
            painting_id AS "paintingId", status,
-           created_at AS "createdAt", replied_at AS "repliedAt"
+           created_at AS "createdAt", replied_at AS "repliedAt",
+           read_at AS "readAt"
     FROM enquiries
     WHERE lower(email) = lower(${email})
     ORDER BY created_at DESC
@@ -227,7 +233,25 @@ export async function findEnquiryByEmail(email: string): Promise<Enquiry | null>
   return (rows[0] as Enquiry) ?? null
 }
 
+/**
+ * Marks read or unread. The caller passes the state it wants rather than a
+ * toggle, so a stale row in the UI cannot flip the wrong way.
+ */
+export async function setEnquiryRead(id: string, read: boolean): Promise<boolean> {
+  const rows = read
+    ? await getSql()`
+        UPDATE enquiries SET read_at = COALESCE(read_at, now())
+        WHERE id = ${id} RETURNING id
+      `
+    : await getSql()`
+        UPDATE enquiries SET read_at = NULL WHERE id = ${id} RETURNING id
+      `
+  return rows.length > 0
+}
+
 /** A visitor writing back makes the enquiry outstanding again. */
 export async function reopenEnquiry(id: string): Promise<void> {
-  await getSql()`UPDATE enquiries SET status = 'new' WHERE id = ${id}`
+  // Unread as well: a fresh answer from the visitor is exactly what should
+  // resurface in the inbox.
+  await getSql()`UPDATE enquiries SET status = 'new', read_at = NULL WHERE id = ${id}`
 }

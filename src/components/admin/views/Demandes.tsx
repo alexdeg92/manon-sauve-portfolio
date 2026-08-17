@@ -29,6 +29,7 @@ interface DemandesProps {
   openId: string | null;
   onOpenId: (id: string) => void;
   onStatus: (id: string, status: EnquiryStatus) => Promise<void>;
+  onRead: (id: string, read: boolean) => Promise<void>;
   onReply: (id: string, body: string) => Promise<boolean>;
   onToast: (message: string) => void;
 }
@@ -38,6 +39,7 @@ export default function Demandes({
   paintings,
   openId,
   onOpenId,
+  onRead,
   onStatus,
   onReply,
   onToast,
@@ -113,7 +115,11 @@ export default function Demandes({
             </div>
           ) : (
             rows.map((enquiry) => {
-              const style = STATUS_STYLE[enquiry.status];
+              // Unread takes precedence in the pill: it is the thing that
+              // changes when the row is toggled, so it has to be what moves.
+              const style = enquiry.readAt
+                ? STATUS_STYLE[enquiry.status]
+                : { label: "Non lue", color: "text-m-sage", border: "border-m-sage-soft" };
               const painting = enquiry.paintingId
                 ? paintings.find((p) => p.id === enquiry.paintingId)
                 : undefined;
@@ -136,7 +142,21 @@ export default function Demandes({
                     )}
                   </div>
                   <div className="min-w-0">
-                    <div className="truncate text-[15px]">{enquiry.name}</div>
+                    <div className="flex items-center gap-2">
+                      {!enquiry.readAt && (
+                        <span
+                          aria-label="Non lue"
+                          className="h-[7px] w-[7px] shrink-0 rounded-full bg-m-sage"
+                        />
+                      )}
+                      <span
+                        className={`truncate text-[15px] ${
+                          enquiry.readAt ? "" : "font-medium"
+                        }`}
+                      >
+                        {enquiry.name}
+                      </span>
+                    </div>
                     <div className="mt-0.5 truncate text-[13px] text-m-stone">
                       {enquiry.subject ?? "Message"} · {formatDate(enquiry.createdAt)}
                     </div>
@@ -158,6 +178,13 @@ export default function Demandes({
                 sent. Closing is the only judgement call, so it is the only
                 control here. */}
             <button
+              onClick={() => onRead(open.id, !open.readAt)}
+              title={open.readAt ? "Marquer non lue" : "Marquer lue"}
+              className="absolute right-[86px] top-4 rounded-full border border-m-line-strong px-3 py-1.5 text-[11px] text-m-stone transition-colors duration-300 hover:border-m-ink hover:text-m-ink"
+            >
+              {open.readAt ? "Non lue" : "Lue"}
+            </button>
+            <button
               onClick={() => onStatus(open.id, open.status === "closed" ? "new" : "closed")}
               title={open.status === "closed" ? "Rouvrir le dossier" : "Clore le dossier"}
               className="absolute right-4 top-4 rounded-full border border-m-line-strong px-3 py-1.5 text-[11px] text-m-stone transition-colors duration-300 hover:border-m-ink hover:text-m-ink"
@@ -165,7 +192,7 @@ export default function Demandes({
               {open.status === "closed" ? "Rouvrir" : "Clore"}
             </button>
 
-            <div className="pr-[76px] text-[11px] uppercase tracking-[.16em] text-m-stone">
+            <div className="pr-[160px] text-[11px] uppercase tracking-[.16em] text-m-stone">
               {open.subject ?? "Message"}
             </div>
             <h3 className="m-0 mt-2.5 text-[22px] font-normal">{open.name}</h3>
