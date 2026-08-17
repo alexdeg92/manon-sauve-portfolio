@@ -1,4 +1,4 @@
-import { supabase } from './supabase'
+import { getSupabase } from './supabase'
 
 export interface Painting {
   id: string
@@ -21,7 +21,7 @@ export interface Painting {
 const OPTIONAL_COLUMNS = ['collection', 'note'] as const
 
 export async function getPaintings(): Promise<Painting[]> {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('paintings')
     .select('*')
     .order('display_order', { ascending: true })
@@ -31,7 +31,7 @@ export async function getPaintings(): Promise<Painting[]> {
 
 export async function savePaintings(paintings: Painting[]): Promise<void> {
   const rows = paintings.map((p, i) => ({ ...p, display_order: i }))
-  const { error } = await supabase.from('paintings').upsert(rows, { onConflict: 'id' })
+  const { error } = await getSupabase().from('paintings').upsert(rows, { onConflict: 'id' })
   if (!error) return
 
   const missing = OPTIONAL_COLUMNS.filter((column) => error.message?.includes(column))
@@ -43,7 +43,7 @@ export async function savePaintings(paintings: Painting[]): Promise<void> {
     missing.forEach((column) => delete copy[column])
     return copy
   })
-  const retry = await supabase.from('paintings').upsert(stripped, { onConflict: 'id' })
+  const retry = await getSupabase().from('paintings').upsert(stripped, { onConflict: 'id' })
   if (retry.error) throw retry.error
 }
 
