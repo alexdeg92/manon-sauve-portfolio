@@ -26,6 +26,16 @@ export function categoryOf(painting: Painting): Category {
   return "autre";
 }
 
+/**
+ * The series a work belongs to: the stored collection when the admin has set
+ * one, otherwise the derived group so nothing ever shows blank.
+ */
+export function collectionOf(painting: Painting, lang: Lang = "fr"): string {
+  const stored = painting.collection?.trim();
+  if (stored) return stored;
+  return CATEGORY_LABELS[categoryOf(painting)][lang];
+}
+
 export const CATEGORY_LABELS: Record<Category, Record<Lang, string>> = {
   portrait: { fr: "Portraits", en: "Portraits" },
   silhouette: { fr: "Silhouettes", en: "Silhouettes" },

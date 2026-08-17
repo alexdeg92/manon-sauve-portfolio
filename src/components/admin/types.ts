@@ -29,6 +29,8 @@ export interface Draft {
   year: string;
   image: string;
   sold: boolean;
+  collection: string;
+  note: string;
 }
 
 export function draftFrom(painting: Painting): Draft {
@@ -41,6 +43,8 @@ export function draftFrom(painting: Painting): Draft {
     year: String(painting.year),
     image: painting.image,
     sold: Boolean(painting.sold),
+    collection: painting.collection ?? "",
+    note: painting.note ?? "",
   };
 }
 
@@ -54,5 +58,7 @@ export function emptyDraft(): Draft {
     year: String(new Date().getFullYear()),
     image: "",
     sold: false,
+    collection: "",
+    note: "",
   };
 }

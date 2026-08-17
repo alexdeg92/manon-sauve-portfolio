@@ -2,14 +2,11 @@
 
 import { useMemo } from "react";
 import { Painting } from "@/data/paintings";
-import { Category, CATEGORY_LABELS, categoryOf } from "@/lib/mobile";
-
-const ORDER: Category[] = ["portrait", "silhouette", "danse", "abstrait", "autre"];
+import { collectionOf } from "@/lib/mobile";
 
 /**
- * Collections are derived from the same rule the public site groups by, since
- * the catalogue has no collection column. Counts and thumbnails are therefore
- * real; creating a custom collection needs a schema change first.
+ * Groups the catalogue by collection. A work without a stored collection falls
+ * into the group derived from its title, so nothing goes missing here.
  */
 export default function Collections({
   paintings,
@@ -19,30 +16,31 @@ export default function Collections({
   onEdit: (painting: Painting) => void;
 }) {
   const groups = useMemo(() => {
-    const byCategory = new Map<Category, Painting[]>();
+    const byName = new Map<string, Painting[]>();
     paintings.forEach((p) => {
-      const key = categoryOf(p);
-      byCategory.set(key, [...(byCategory.get(key) ?? []), p]);
+      const name = collectionOf(p);
+      byName.set(name, [...(byName.get(name) ?? []), p]);
     });
-    return ORDER.filter((c) => byCategory.has(c)).map((c) => ({
-      category: c,
-      name: CATEGORY_LABELS[c].fr,
-      works: byCategory.get(c) ?? [],
-    }));
+    return Array.from(byName.entries())
+      .map(([name, works]) => ({
+        name,
+        works,
+        assigned: works.filter((w) => w.collection?.trim()).length,
+      }))
+      .sort((a, b) => b.works.length - a.works.length);
   }, [paintings]);
 
   return (
     <div className="animate-mFade px-[38px] py-[26px]">
-      <div className="max-w-[620px] rounded-[12px] border border-dashed border-m-line-strong bg-m-sand-soft px-4 py-3 text-[12px] leading-[1.6] text-m-stone">
-        Les collections ci-dessous sont déduites du titre de chaque œuvre, comme sur le site
-        public. Pour créer et nommer vos propres séries, il faudra ajouter une colonne
-        <span className="font-medium"> collection</span> au catalogue.
+      <div className="max-w-[640px] rounded-[12px] border border-m-line bg-white px-4 py-3 text-[12px] leading-[1.6] text-m-stone">
+        Nommez la série d&apos;une œuvre dans sa fiche. Sans nom, elle est classée
+        automatiquement d&apos;après son titre.
       </div>
 
       <div className="mt-[22px] grid grid-cols-3 gap-4">
         {groups.map((group) => (
           <div
-            key={group.category}
+            key={group.name}
             className="animate-mRise rounded-[14px] border border-[#E9E4DA] bg-white p-[22px]"
           >
             <div className="flex items-start justify-between gap-3">
@@ -54,6 +52,11 @@ export default function Collections({
                   {group.works.filter((w) => !w.sold).length === 1 ? "" : "s"}
                 </div>
               </div>
+              {group.assigned === 0 && (
+                <span className="shrink-0 rounded-full border border-m-line-strong px-2.5 py-1 text-[10px] uppercase tracking-[.12em] text-m-stone-soft">
+                  Auto
+                </span>
+              )}
             </div>
 
             <div className="mt-[18px] flex gap-1.5">

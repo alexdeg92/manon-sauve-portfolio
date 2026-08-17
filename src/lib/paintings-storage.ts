@@ -9,7 +9,16 @@ export interface Painting {
   image: string
   year: number
   sold?: boolean
+  collection?: string | null
+  note?: string | null
 }
+
+/**
+ * Columns added by migrations/001_add_collection_and_note.sql. Until that has
+ * run, writing them fails; savePaintings retries without them so a save never
+ * breaks on a database that has not been migrated yet.
+ */
+const OPTIONAL_COLUMNS = ['collection', 'note'] as const
 
 export async function getPaintings(): Promise<Painting[]> {
   const { data, error } = await supabase
@@ -23,7 +32,19 @@ export async function getPaintings(): Promise<Painting[]> {
 export async function savePaintings(paintings: Painting[]): Promise<void> {
   const rows = paintings.map((p, i) => ({ ...p, display_order: i }))
   const { error } = await supabase.from('paintings').upsert(rows, { onConflict: 'id' })
-  if (error) throw error
+  if (!error) return
+
+  const missing = OPTIONAL_COLUMNS.filter((column) => error.message?.includes(column))
+  if (missing.length === 0) throw error
+
+  console.warn(`paintings table is missing ${missing.join(', ')}; saving without them`)
+  const stripped = rows.map((row) => {
+    const copy: Record<string, unknown> = { ...row }
+    missing.forEach((column) => delete copy[column])
+    return copy
+  })
+  const retry = await supabase.from('paintings').upsert(stripped, { onConflict: 'id' })
+  if (retry.error) throw retry.error
 }
 
 export function isAuthed(cookieHeader: string): boolean {

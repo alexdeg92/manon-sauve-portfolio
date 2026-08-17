@@ -1,7 +1,8 @@
+import { put } from '@vercel/blob'
 import { NextResponse } from 'next/server'
 import { isAuthed } from '@/lib/paintings-storage'
-import { supabase } from '@/lib/supabase'
 
+// Images live in Vercel Blob; only the structured catalogue is in the database.
 export async function POST(req: Request) {
   const cookie = req.headers.get('cookie') || ''
   if (!isAuthed(cookie)) {
@@ -10,31 +11,25 @@ export async function POST(req: Request) {
 
   try {
     const formData = await req.formData()
-    const file = formData.get('file') as File
+    const file = formData.get('file') as File | null
 
     if (!file) {
       return NextResponse.json({ error: 'Aucun fichier fourni' }, { status: 400 })
     }
 
     const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, '-')
-    const filename = `${Date.now()}-${cleanName}`
+    const blob = await put(`paintings/${Date.now()}-${cleanName}`, file, {
+      access: 'public',
+      contentType: file.type || undefined,
+    })
 
-    const arrayBuffer = await file.arrayBuffer()
-    const buffer = Buffer.from(arrayBuffer)
-
-    const { error } = await supabase.storage
-      .from('paintings')
-      .upload(filename, buffer, { contentType: file.type, upsert: true })
-
-    if (error) throw error
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('paintings')
-      .getPublicUrl(filename)
-
-    return NextResponse.json({ url: publicUrl })
+    return NextResponse.json({ url: blob.url })
   } catch (err) {
     console.error('POST /api/upload error:', err)
-    return NextResponse.json({ error: "Erreur lors de l'upload" }, { status: 500 })
+    const message =
+      err instanceof Error && /token/i.test(err.message)
+        ? 'BLOB_READ_WRITE_TOKEN manquant.'
+        : "Erreur lors de l'upload"
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

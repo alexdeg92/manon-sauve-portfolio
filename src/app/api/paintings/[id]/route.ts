@@ -34,6 +34,8 @@ export async function PUT(
       image: body.image ?? paintings[idx].image,
       year: body.year !== undefined ? Number(body.year) : paintings[idx].year,
       sold: body.sold !== undefined ? Boolean(body.sold) : paintings[idx].sold,
+      collection: body.collection !== undefined ? body.collection || null : paintings[idx].collection,
+      note: body.note !== undefined ? body.note || null : paintings[idx].note,
     };
 
     await savePaintings(paintings);

@@ -1,7 +1,7 @@
 "use client";
 
 import { Painting } from "@/data/paintings";
-import { CATEGORY_LABELS, categoryOf, formatPrice } from "@/lib/mobile";
+import { collectionOf, formatPrice } from "@/lib/mobile";
 
 type StatusFilter = "all" | "available" | "sold";
 
@@ -183,7 +183,7 @@ export default function Oeuvres({
                   <div className="mt-0.5 truncate text-[12px] text-m-stone">{painting.medium}</div>
                 </button>
                 <span className="text-[13px] text-m-stone-deep">
-                  {CATEGORY_LABELS[categoryOf(painting)].fr}
+                  {collectionOf(painting)}
                 </span>
                 <span className="text-[13px] text-m-stone-deep">{painting.dimensions}</span>
                 <span className="text-[13px] text-m-stone-deep">{painting.year}</span>

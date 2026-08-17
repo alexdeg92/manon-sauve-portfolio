@@ -57,11 +57,13 @@ export default function WorkSheet({ painting, open, onClose, onEnquire }: WorkSh
               </button>
             </div>
 
+            {/* The artist's own note when there is one, else the standard blurb. */}
             <p className="mt-[18px] font-editorial text-[16px] leading-[1.65] text-m-stone-deep">
-              {t(
-                "Acrylique sur toile, signée. Expédiée depuis l'atelier de Saint-Joseph-du-Lac, montée sur châssis et prête à accrocher.",
-                "Acrylic on canvas, signed. Shipped from the Saint-Joseph-du-Lac studio, stretched and ready to hang."
-              )}
+              {painting.note?.trim() ||
+                t(
+                  "Acrylique sur toile, signée. Expédiée depuis l'atelier de Saint-Joseph-du-Lac, montée sur châssis et prête à accrocher.",
+                  "Acrylic on canvas, signed. Shipped from the Saint-Joseph-du-Lac studio, stretched and ready to hang."
+                )}
             </p>
 
             <div className="mt-[22px] text-[26px] tracking-[-.02em]">

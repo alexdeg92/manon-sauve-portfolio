@@ -6,6 +6,8 @@ import { Draft } from "./types";
 
 interface EditDrawerProps {
   draft: Draft | null;
+  /** Collection names already in use, offered as one-tap choices. */
+  collections: string[];
   saving: boolean;
   uploading: boolean;
   onChange: (draft: Draft) => void;
@@ -17,6 +19,7 @@ interface EditDrawerProps {
 
 export default function EditDrawer({
   draft,
+  collections,
   saving,
   uploading,
   onChange,
@@ -44,9 +47,9 @@ export default function EditDrawer({
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) =>
     onChange({ ...draft, [key]: value });
 
-  // The catalogue has no collection column; the site groups works by the same
-  // derivation, so it is shown here read-only rather than as a false control.
-  const collection = draft.title
+  // Leaving the collection empty is allowed: the site then falls back to the
+  // group derived from the title, which is what this suggestion shows.
+  const derived = draft.title
     ? CATEGORY_LABELS[
         categoryOf({
           id: draft.id ?? "",
@@ -58,7 +61,9 @@ export default function EditDrawer({
           year: Number(draft.year) || 0,
         })
       ].fr
-    : "—";
+    : null;
+
+  const choices = Array.from(new Set([...collections, ...(derived ? [derived] : [])])).sort();
 
   return (
     <div className="fixed inset-0 z-[60]">
@@ -143,10 +148,37 @@ export default function EditDrawer({
           <Input value={draft.medium} onChange={(v) => set("medium", v)} />
 
           <Label>Collection</Label>
-          <div className="mt-2.5 rounded-[11px] border border-dashed border-m-line-strong px-4 py-3 text-[13px] text-m-stone">
-            {collection}
-            <span className="ml-2 text-[11px]">— déduite du titre, pas encore modifiable</span>
+          <div className="mt-2.5 flex flex-wrap gap-2">
+            {choices.map((name) => (
+              <button
+                key={name}
+                onClick={() => set("collection", draft.collection === name ? "" : name)}
+                aria-pressed={draft.collection === name}
+                className={`rounded-full border px-4 py-[9px] text-[13px] transition-all duration-300 ${
+                  draft.collection === name
+                    ? "border-m-ink bg-m-ink text-m-paper"
+                    : "border-m-line-strong bg-transparent"
+                }`}
+              >
+                {name}
+              </button>
+            ))}
           </div>
+          <input
+            value={draft.collection}
+            onChange={(e) => set("collection", e.target.value)}
+            placeholder={derived ? `Vide = ${derived}` : "Nom de la série"}
+            className="mt-2.5 w-full rounded-[11px] border border-m-line-strong bg-transparent px-4 py-3 text-[14px] outline-none focus:border-m-sage"
+          />
+
+          <Label>Note d&apos;atelier</Label>
+          <textarea
+            rows={4}
+            value={draft.note}
+            onChange={(e) => set("note", e.target.value)}
+            placeholder="Quelques mots sur la pièce, affichés sur le site."
+            className="mt-2.5 w-full resize-y rounded-[11px] border border-m-line-strong bg-transparent px-4 py-3.5 text-[14px] outline-none focus:border-m-sage"
+          />
 
           <Label>Statut</Label>
           <div className="mt-2.5 flex gap-2">

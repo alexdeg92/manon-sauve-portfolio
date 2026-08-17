@@ -158,6 +158,8 @@ export default function AdminPortal() {
       year: Number(draft.year) || new Date().getFullYear(),
       image: draft.image,
       sold: draft.sold,
+      collection: draft.collection.trim() || null,
+      note: draft.note.trim() || null,
     };
 
     setSaving(true);
@@ -322,6 +324,19 @@ export default function AdminPortal() {
     });
   }, [paintings, query, statusFilter]);
 
+  /** Collection names already in the catalogue, offered in the edit drawer. */
+  const knownCollections = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          paintings
+            .map((p) => p.collection?.trim())
+            .filter((c): c is string => Boolean(c))
+        )
+      ).sort(),
+    [paintings]
+  );
+
   const openEdit = (painting: Painting) => setDraft(draftFrom(painting));
   const openAdd = () => setDraft(emptyDraft());
 
@@ -436,6 +451,7 @@ export default function AdminPortal() {
 
       <EditDrawer
         draft={draft}
+        collections={knownCollections}
         saving={saving}
         uploading={uploading}
         onChange={setDraft}

@@ -101,11 +101,13 @@ export default function WorkOverlay({
           <div className="mt-3.5 text-[15px] text-m-quiet">
             {painting.year} · {painting.medium} · {painting.dimensions}
           </div>
+          {/* The artist's own note when there is one, else the standard blurb. */}
           <p className="mt-7 max-w-[400px] font-editorial text-[19px] leading-[1.7] text-m-stone-deep">
-            {t(
-              "Pièce unique, signée. Expédiée depuis l'atelier de Saint-Joseph-du-Lac, montée sur châssis et prête à accrocher.",
-              "One of a kind, signed. Shipped from the Saint-Joseph-du-Lac studio, stretched and ready to hang."
-            )}
+            {painting.note?.trim() ||
+              t(
+                "Pièce unique, signée. Expédiée depuis l'atelier de Saint-Joseph-du-Lac, montée sur châssis et prête à accrocher.",
+                "One of a kind, signed. Shipped from the Saint-Joseph-du-Lac studio, stretched and ready to hang."
+              )}
           </p>
           <div
             className={`mt-9 text-[30px] tracking-[-.02em] ${
