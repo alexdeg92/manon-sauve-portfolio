@@ -34,6 +34,11 @@ export default function Home() {
     setPaintings((prev) => [created, ...prev.filter((p) => p.id !== created.id)]);
   }, []);
 
+  // Deleting from the phone drops the work from the gallery behind the sheet.
+  const handlePaintingDeleted = useCallback((id: string) => {
+    setPaintings((prev) => prev.filter((p) => p.id !== id));
+  }, []);
+
   return (
     // One provider so the FR/EN choice survives a resize across the breakpoint.
     <SiteProvider>
@@ -42,6 +47,7 @@ export default function Home() {
           paintings={paintings}
           onPaintingUpdated={handlePaintingUpdated}
           onPaintingAdded={handlePaintingAdded}
+          onPaintingDeleted={handlePaintingDeleted}
         />
       </div>
       <div className="hidden md:block">

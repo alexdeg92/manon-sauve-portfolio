@@ -19,7 +19,7 @@ import Expositions from "./screens/Expositions";
 import Contenu from "./screens/Contenu";
 import Medias from "./screens/Medias";
 import WorkSheet from "./WorkSheet";
-import AddWorkSheet from "./AddWorkSheet";
+import WorkFormSheet from "./WorkFormSheet";
 import EnquirySheet from "./EnquirySheet";
 import TabBar from "./TabBar";
 
@@ -27,6 +27,7 @@ interface MobileAppProps {
   paintings: Painting[];
   onPaintingUpdated: (painting: Painting) => void;
   onPaintingAdded: (painting: Painting) => void;
+  onPaintingDeleted: (id: string) => void;
 }
 
 /** The page provides SiteProvider so language carries across the breakpoint. */
@@ -34,12 +35,17 @@ export default function MobileApp({
   paintings,
   onPaintingUpdated,
   onPaintingAdded,
+  onPaintingDeleted,
 }: MobileAppProps) {
   const { toast, say, t } = useSite();
   const [screen, setScreen] = useState<ScreenName>("accueil");
   const [isAdmin, setIsAdmin] = useState(false);
   const [workSheet, setWorkSheet] = useState<Painting | null>(null);
-  const [addWork, setAddWork] = useState(false);
+  /** One sheet for both: a painting means edit, null means add. */
+  const [workForm, setWorkForm] = useState<{ open: boolean; painting: Painting | null }>({
+    open: false,
+    painting: null,
+  });
   const [enquiry, setEnquiry] = useState<{ open: boolean; painting: Painting | null }>({
     open: false,
     painting: null,
@@ -218,29 +224,65 @@ export default function MobileApp({
     [paintings]
   );
 
+  const openAddWork = useCallback(() => setWorkForm({ open: true, painting: null }), []);
+
+  /** Opened from a work row or a media tile; the sheet fills itself from it. */
+  const openEditWork = useCallback(
+    (painting: Painting) => setWorkForm({ open: true, painting }),
+    []
+  );
+
   /** The photo is already in storage by now; this only saves the catalogue row. */
-  const createPainting = useCallback(
-    async (payload: Omit<Painting, "id">): Promise<boolean> => {
+  const savePainting = useCallback(
+    async (payload: Omit<Painting, "id">, id?: string): Promise<boolean> => {
       try {
-        const res = await fetch("/api/paintings", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: `painting-${Date.now()}`, ...payload }),
-        });
+        const res = id
+          ? await fetch(`/api/paintings/${id}`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            })
+          : await fetch("/api/paintings", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ id: `painting-${Date.now()}`, ...payload }),
+            });
         const data = await res.json();
         if (!res.ok) {
           say(data?.error || t("Erreur lors de l'enregistrement.", "Could not save the work."));
           return false;
         }
-        onPaintingAdded(data as Painting);
-        say(t("Œuvre ajoutée à la galerie.", "Work added to the gallery."));
+        if (id) {
+          onPaintingUpdated(data as Painting);
+          say(t("Œuvre modifiée.", "Work updated."));
+        } else {
+          onPaintingAdded(data as Painting);
+          say(t("Œuvre ajoutée à la galerie.", "Work added to the gallery."));
+        }
         return true;
       } catch {
         say(t("Erreur lors de l'enregistrement.", "Could not save the work."));
         return false;
       }
     },
-    [onPaintingAdded, say, t]
+    [onPaintingAdded, onPaintingUpdated, say, t]
+  );
+
+  /** Drops the catalogue row. The photo itself stays in blob storage. */
+  const removePainting = useCallback(
+    async (painting: Painting): Promise<boolean> => {
+      try {
+        const res = await fetch(`/api/paintings/${painting.id}`, { method: "DELETE" });
+        if (!res.ok) throw new Error(String(res.status));
+        onPaintingDeleted(painting.id);
+        say(t("Œuvre supprimée.", "Work deleted."));
+        return true;
+      } catch {
+        say(t("Erreur lors de la suppression.", "Could not delete the work."));
+        return false;
+      }
+    },
+    [onPaintingDeleted, say, t]
   );
 
   // Signing out drops the artist tabs and returns to the visitor home.
@@ -280,7 +322,9 @@ export default function MobileApp({
           <Oeuvres
             paintings={paintings}
             onUpdated={onPaintingUpdated}
-            onAdd={() => setAddWork(true)}
+            onAdd={openAddWork}
+            onEdit={openEditWork}
+            onDelete={removePainting}
           />
         )}
         {isAdmin && screen === "demandes" && (
@@ -306,7 +350,8 @@ export default function MobileApp({
           <Medias
             paintings={paintings}
             onBack={() => goto("gestion")}
-            onAdd={() => setAddWork(true)}
+            onAdd={openAddWork}
+            onEdit={openEditWork}
           />
         )}
       </main>
@@ -317,11 +362,13 @@ export default function MobileApp({
         onClose={() => setWorkSheet(null)}
         onEnquire={openEnquiry}
       />
-      <AddWorkSheet
-        open={addWork}
+      <WorkFormSheet
+        open={workForm.open}
+        painting={workForm.painting}
         collections={knownCollections}
-        onClose={() => setAddWork(false)}
-        onCreate={createPainting}
+        onClose={() => setWorkForm((prev) => ({ ...prev, open: false }))}
+        onSave={savePainting}
+        onDelete={removePainting}
       />
       <EnquirySheet
         open={enquiry.open}

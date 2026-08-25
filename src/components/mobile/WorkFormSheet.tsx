@@ -5,13 +5,17 @@ import { Painting } from "@/data/paintings";
 import { useSite } from "@/components/site/context";
 import Sheet from "./Sheet";
 
-interface AddWorkSheetProps {
+interface WorkFormSheetProps {
   open: boolean;
+  /** The work being edited, or null when adding a new one. */
+  painting: Painting | null;
   /** Collection names already in use, offered as one-tap choices. */
   collections: string[];
   onClose: () => void;
   /** Resolves true once the work is saved, so the sheet can clear itself. */
-  onCreate: (payload: Omit<Painting, "id">) => Promise<boolean>;
+  onSave: (payload: Omit<Painting, "id">, id?: string) => Promise<boolean>;
+  /** Resolves true once the work is gone from the catalogue. */
+  onDelete: (painting: Painting) => Promise<boolean>;
 }
 
 const emptyForm = () => ({
@@ -25,13 +29,34 @@ const emptyForm = () => ({
   sold: false,
 });
 
+const formOf = (painting: Painting) => ({
+  title: painting.title,
+  medium: painting.medium,
+  dimensions: painting.dimensions,
+  price: painting.price === null ? "" : String(painting.price),
+  year: String(painting.year),
+  collection: painting.collection ?? "",
+  note: painting.note ?? "",
+  sold: Boolean(painting.sold),
+});
+
 /**
  * The phone counterpart of the desktop EditDrawer: pick a photo from the camera
  * roll (or the camera), upload it to the same /api/upload endpoint, then save
  * the work. The upload runs as soon as a file is chosen so the artist sees the
  * photo land before filling the rest in.
+ *
+ * The same sheet adds and edits, so a work created on the phone can be
+ * corrected or deleted there too, without reaching for the desktop portal.
  */
-export default function AddWorkSheet({ open, collections, onClose, onCreate }: AddWorkSheetProps) {
+export default function WorkFormSheet({
+  open,
+  painting,
+  collections,
+  onClose,
+  onSave,
+  onDelete,
+}: WorkFormSheetProps) {
   const { t, say } = useSite();
   const fileRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState(emptyForm);
@@ -40,24 +65,28 @@ export default function AddWorkSheet({ open, collections, onClose, onCreate }: A
   const [image, setImage] = useState("");
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  /** Deleting takes two taps: the phone has no room for a confirm dialog. */
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const set = <K extends keyof ReturnType<typeof emptyForm>>(
     key: K,
     value: ReturnType<typeof emptyForm>[K]
   ) => setForm((prev) => ({ ...prev, [key]: value }));
 
-  // A reopened sheet always starts blank rather than on the previous draft.
+  // A reopened sheet shows the work it was opened on, or a blank draft when
+  // adding, rather than whatever the previous session left behind.
   useEffect(() => {
     if (!open) return;
-    setForm(emptyForm());
-    setImage("");
+    setForm(painting ? formOf(painting) : emptyForm());
+    setImage(painting?.image ?? "");
     setPreview((old) => {
       if (old) URL.revokeObjectURL(old);
       return null;
     });
     setUploading(false);
     setSaving(false);
-  }, [open]);
+    setConfirmDelete(false);
+  }, [open, painting]);
 
   // The object URL holds the file in memory until it is released.
   useEffect(() => () => {
@@ -85,6 +114,9 @@ export default function AddWorkSheet({ open, collections, onClose, onCreate }: A
         if (old) URL.revokeObjectURL(old);
         return null;
       });
+      // Fall back to the photo already on the work, so a failed replacement
+      // does not leave the sheet looking as though the work lost its image.
+      setImage(painting?.image ?? "");
       say(t("Erreur lors du téléversement.", "Could not upload the photo."));
     } finally {
       setUploading(false);
@@ -97,18 +129,34 @@ export default function AddWorkSheet({ open, collections, onClose, onCreate }: A
 
     setSaving(true);
     try {
-      const ok = await onCreate({
-        title: form.title.trim(),
-        medium: form.medium.trim(),
-        dimensions: form.dimensions.trim(),
-        price: form.price.trim() === "" ? null : Number(form.price.replace(/[^\d.]/g, "")),
-        year: Number(form.year) || new Date().getFullYear(),
-        image,
-        sold: form.sold,
-        collection: form.collection.trim() || null,
-        note: form.note.trim() || null,
-      });
+      const ok = await onSave(
+        {
+          title: form.title.trim(),
+          medium: form.medium.trim(),
+          dimensions: form.dimensions.trim(),
+          price: form.price.trim() === "" ? null : Number(form.price.replace(/[^\d.]/g, "")),
+          year: Number(form.year) || new Date().getFullYear(),
+          image,
+          sold: form.sold,
+          collection: form.collection.trim() || null,
+          note: form.note.trim() || null,
+        },
+        painting?.id
+      );
       if (ok) onClose();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const remove = async () => {
+    if (!painting) return;
+    if (!confirmDelete) return setConfirmDelete(true);
+    setSaving(true);
+    try {
+      const ok = await onDelete(painting);
+      if (ok) onClose();
+      else setConfirmDelete(false);
     } finally {
       setSaving(false);
     }
@@ -123,13 +171,18 @@ export default function AddWorkSheet({ open, collections, onClose, onCreate }: A
           {t("Atelier", "Studio")}
         </div>
         <h3 className="mt-2 font-editorial text-[26px] font-light italic">
-          {t("Ajouter une œuvre", "Add a work")}
+          {painting ? t("Modifier l'œuvre", "Edit the work") : t("Ajouter une œuvre", "Add a work")}
         </h3>
         <p className="mt-1.5 text-[13px] text-m-stone">
-          {t(
-            "Prenez la photo ou choisissez-la dans vos images.",
-            "Take the photo or pick one from your library."
-          )}
+          {painting
+            ? t(
+                "Modifiez la fiche, remplacez la photo ou retirez l'œuvre.",
+                "Change the details, replace the photo or remove the work."
+              )
+            : t(
+                "Prenez la photo ou choisissez-la dans vos images.",
+                "Take the photo or pick one from your library."
+              )}
         </p>
 
         <button
@@ -293,7 +346,9 @@ export default function AddWorkSheet({ open, collections, onClose, onCreate }: A
           >
             {saving
               ? t("Enregistrement…", "Saving…")
-              : t("Ajouter à la galerie", "Add to the gallery")}
+              : painting
+                ? t("Enregistrer les modifications", "Save changes")
+                : t("Ajouter à la galerie", "Add to the gallery")}
           </button>
           <button
             onClick={onClose}
@@ -303,6 +358,22 @@ export default function AddWorkSheet({ open, collections, onClose, onCreate }: A
             {t("Fermer", "Close")}
           </button>
         </div>
+
+        {painting && (
+          <button
+            onClick={remove}
+            disabled={saving}
+            className={`mt-2.5 w-full rounded-full border py-3.5 text-[13px] transition-colors duration-300 disabled:opacity-50 ${
+              confirmDelete
+                ? "border-[#B4534A] bg-[#B4534A] text-white"
+                : "border-[#DCC7C3] bg-transparent text-[#B4534A]"
+            }`}
+          >
+            {confirmDelete
+              ? t("Confirmer la suppression", "Confirm deletion")
+              : t("Supprimer l'œuvre", "Delete the work")}
+          </button>
+        )}
       </div>
     </Sheet>
   );

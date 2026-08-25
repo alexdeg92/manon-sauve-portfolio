@@ -10,10 +10,13 @@ export default function Medias({
   paintings,
   onBack,
   onAdd,
+  onEdit,
 }: {
   paintings: Painting[];
   onBack: () => void;
   onAdd: () => void;
+  /** Tiles open the work sheet: a photo is only ever replaced through its work. */
+  onEdit: (painting: Painting) => void;
 }) {
   const { t } = useSite();
 
@@ -42,12 +45,14 @@ export default function Medias({
       <Reveal index={1}>
         <div className="grid grid-cols-3 gap-2.5 px-6 pt-[18px]">
           {paintings.map((painting) => (
-            <div
+            <button
               key={painting.id}
+              onClick={() => onEdit(painting)}
+              aria-label={t(`Modifier ${painting.title}`, `Edit ${painting.title}`)}
               className="relative aspect-square overflow-hidden rounded-[10px] bg-m-sand"
             >
               <PaintingImage src={painting.image} alt={painting.title} sizes="33vw" />
-            </div>
+            </button>
           ))}
         </div>
       </Reveal>
