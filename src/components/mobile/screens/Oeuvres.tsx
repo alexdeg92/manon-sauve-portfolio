@@ -8,11 +8,12 @@ import PaintingImage from "@/components/site/PaintingImage";
 interface OeuvresProps {
   paintings: Painting[];
   onUpdated: (painting: Painting) => void;
+  onAdd: () => void;
 }
 
 /** Price and availability edits go straight to PUT /api/paintings/:id. */
-export default function Oeuvres({ paintings, onUpdated }: OeuvresProps) {
-  const { t, say } = useSite();
+export default function Oeuvres({ paintings, onUpdated, onAdd }: OeuvresProps) {
+  const { t } = useSite();
 
   return (
     <div className="animate-mFade">
@@ -25,16 +26,9 @@ export default function Oeuvres({ paintings, onUpdated }: OeuvresProps) {
             {t("Touchez un prix pour le modifier.", "Tap a price to change it.")}
           </p>
         </div>
-        {/* Adding a work needs the photo upload form, which is desktop-only. */}
+        {/* Opens the add sheet, which uploads the photo from the phone. */}
         <button
-          onClick={() =>
-            say(
-              t(
-                "L'ajout d'une œuvre se fait sur ordinateur.",
-                "Adding a work is done on desktop."
-              )
-            )
-          }
+          onClick={onAdd}
           className="shrink-0 rounded-full bg-m-ink px-[18px] py-2.5 text-[13px] text-m-paper"
         >
           {t("Ajouter", "Add")}

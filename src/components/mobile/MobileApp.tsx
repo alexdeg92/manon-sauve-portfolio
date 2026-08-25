@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Painting } from "@/data/paintings";
 import { EnquiryStatus, EnquiryWithThread } from "@/lib/enquiries";
 import { useSite } from "@/components/site/context";
@@ -19,20 +19,27 @@ import Expositions from "./screens/Expositions";
 import Contenu from "./screens/Contenu";
 import Medias from "./screens/Medias";
 import WorkSheet from "./WorkSheet";
+import AddWorkSheet from "./AddWorkSheet";
 import EnquirySheet from "./EnquirySheet";
 import TabBar from "./TabBar";
 
 interface MobileAppProps {
   paintings: Painting[];
   onPaintingUpdated: (painting: Painting) => void;
+  onPaintingAdded: (painting: Painting) => void;
 }
 
 /** The page provides SiteProvider so language carries across the breakpoint. */
-export default function MobileApp({ paintings, onPaintingUpdated }: MobileAppProps) {
+export default function MobileApp({
+  paintings,
+  onPaintingUpdated,
+  onPaintingAdded,
+}: MobileAppProps) {
   const { toast, say, t } = useSite();
   const [screen, setScreen] = useState<ScreenName>("accueil");
   const [isAdmin, setIsAdmin] = useState(false);
   const [workSheet, setWorkSheet] = useState<Painting | null>(null);
+  const [addWork, setAddWork] = useState(false);
   const [enquiry, setEnquiry] = useState<{ open: boolean; painting: Painting | null }>({
     open: false,
     painting: null,
@@ -202,6 +209,40 @@ export default function MobileApp({ paintings, onPaintingUpdated }: MobileAppPro
 
   const openWork = useCallback((painting: Painting) => setWorkSheet(painting), []);
 
+  /** Collection names already in the catalogue, offered in the add sheet. */
+  const knownCollections = useMemo(
+    () =>
+      Array.from(
+        new Set(paintings.map((p) => p.collection?.trim()).filter((c): c is string => Boolean(c)))
+      ).sort(),
+    [paintings]
+  );
+
+  /** The photo is already in storage by now; this only saves the catalogue row. */
+  const createPainting = useCallback(
+    async (payload: Omit<Painting, "id">): Promise<boolean> => {
+      try {
+        const res = await fetch("/api/paintings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: `painting-${Date.now()}`, ...payload }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          say(data?.error || t("Erreur lors de l'enregistrement.", "Could not save the work."));
+          return false;
+        }
+        onPaintingAdded(data as Painting);
+        say(t("Œuvre ajoutée à la galerie.", "Work added to the gallery."));
+        return true;
+      } catch {
+        say(t("Erreur lors de l'enregistrement.", "Could not save the work."));
+        return false;
+      }
+    },
+    [onPaintingAdded, say, t]
+  );
+
   // Signing out drops the artist tabs and returns to the visitor home.
   const logout = useCallback(async () => {
     try {
@@ -236,7 +277,11 @@ export default function MobileApp({ paintings, onPaintingUpdated }: MobileAppPro
           <Bord paintings={paintings} enquiries={enquiries} onGoto={goto} />
         )}
         {isAdmin && screen === "oeuvres" && (
-          <Oeuvres paintings={paintings} onUpdated={onPaintingUpdated} />
+          <Oeuvres
+            paintings={paintings}
+            onUpdated={onPaintingUpdated}
+            onAdd={() => setAddWork(true)}
+          />
         )}
         {isAdmin && screen === "demandes" && (
           <Demandes
@@ -258,7 +303,11 @@ export default function MobileApp({ paintings, onPaintingUpdated }: MobileAppPro
         {isAdmin && screen === "expositions" && <Expositions onBack={() => goto("gestion")} />}
         {isAdmin && screen === "contenu" && <Contenu onBack={() => goto("gestion")} />}
         {isAdmin && screen === "medias" && (
-          <Medias paintings={paintings} onBack={() => goto("gestion")} />
+          <Medias
+            paintings={paintings}
+            onBack={() => goto("gestion")}
+            onAdd={() => setAddWork(true)}
+          />
         )}
       </main>
 
@@ -267,6 +316,12 @@ export default function MobileApp({ paintings, onPaintingUpdated }: MobileAppPro
         open={Boolean(workSheet)}
         onClose={() => setWorkSheet(null)}
         onEnquire={openEnquiry}
+      />
+      <AddWorkSheet
+        open={addWork}
+        collections={knownCollections}
+        onClose={() => setAddWork(false)}
+        onCreate={createPainting}
       />
       <EnquirySheet
         open={enquiry.open}

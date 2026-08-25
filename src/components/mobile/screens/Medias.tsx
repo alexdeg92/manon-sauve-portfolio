@@ -9,9 +9,11 @@ import SubScreen from "./SubScreen";
 export default function Medias({
   paintings,
   onBack,
+  onAdd,
 }: {
   paintings: Painting[];
   onBack: () => void;
+  onAdd: () => void;
 }) {
   const { t } = useSite();
 
@@ -24,10 +26,16 @@ export default function Medias({
           </div>
           <p className="mt-2 text-[12px] leading-[1.5] text-m-stone">
             {t(
-              "Le téléversement se fait sur ordinateur, depuis le portail, qui rattache la photo à une œuvre.",
-              "Uploading is done on desktop, from the portal, which attaches the photo to a work."
+              "La photo est téléversée puis rattachée à une œuvre de la galerie.",
+              "The photo is uploaded and then attached to a work in the gallery."
             )}
           </p>
+          <button
+            onClick={onAdd}
+            className="mt-[18px] rounded-full bg-m-ink px-6 py-3 text-[13px] text-m-paper"
+          >
+            {t("Choisir une photo", "Choose a photo")}
+          </button>
         </div>
       </Reveal>
 
