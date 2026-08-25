@@ -37,7 +37,6 @@ export default function TabBar({
     visites: t("Visites", "Visits"),
     expositions: t("Expositions", "Exhibitions"),
     contenu: t("Contenu", "Content"),
-    medias: t("Médias", "Media"),
   };
 
   return (

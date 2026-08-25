@@ -81,16 +81,6 @@ const ITEMS: { key: AdminView; label: string; icon: React.ReactNode }[] = [
       </>
     ),
   },
-  {
-    key: "medias",
-    label: "Médiathèque",
-    icon: (
-      <>
-        <rect x="3.5" y="5.5" width="17" height="13" rx="2" />
-        <path d="M3.5 15 8 10.5l3.5 3.5L14 11.5l6.5 6" />
-      </>
-    ),
-  },
 ];
 
 export default function Sidebar({

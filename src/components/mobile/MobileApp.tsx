@@ -17,7 +17,6 @@ import Collections from "./screens/Collections";
 import Visites from "./screens/Visites";
 import Expositions from "./screens/Expositions";
 import Contenu from "./screens/Contenu";
-import Medias from "./screens/Medias";
 import WorkSheet from "./WorkSheet";
 import WorkFormSheet from "./WorkFormSheet";
 import EnquirySheet from "./EnquirySheet";
@@ -346,14 +345,6 @@ export default function MobileApp({
         {isAdmin && screen === "visites" && <Visites onBack={() => goto("gestion")} />}
         {isAdmin && screen === "expositions" && <Expositions onBack={() => goto("gestion")} />}
         {isAdmin && screen === "contenu" && <Contenu onBack={() => goto("gestion")} />}
-        {isAdmin && screen === "medias" && (
-          <Medias
-            paintings={paintings}
-            onBack={() => goto("gestion")}
-            onAdd={openAddWork}
-            onEdit={openEditWork}
-          />
-        )}
       </main>
 
       <WorkSheet

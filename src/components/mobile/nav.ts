@@ -12,8 +12,7 @@ export type ScreenName =
   | "collections"
   | "visites"
   | "expositions"
-  | "contenu"
-  | "medias";
+  | "contenu";
 
 export type Mode = "visiteur" | "artiste";
 
@@ -26,7 +25,6 @@ export const PARENT_TAB: Partial<Record<ScreenName, ScreenName>> = {
   visites: "gestion",
   expositions: "gestion",
   contenu: "gestion",
-  medias: "gestion",
 };
 
 export const MODE_OF: Record<ScreenName, Mode> = {
@@ -42,5 +40,4 @@ export const MODE_OF: Record<ScreenName, Mode> = {
   visites: "artiste",
   expositions: "artiste",
   contenu: "artiste",
-  medias: "artiste",
 };

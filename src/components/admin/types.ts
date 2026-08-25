@@ -7,8 +7,7 @@ export type AdminView =
   | "collections"
   | "visites"
   | "expositions"
-  | "contenu"
-  | "medias";
+  | "contenu";
 
 export const VIEW_TITLES: Record<AdminView, [string, string]> = {
   bord: ["Tableau de bord", "Vue d'ensemble de l'atelier"],
@@ -18,7 +17,6 @@ export const VIEW_TITLES: Record<AdminView, [string, string]> = {
   visites: ["Visites d'atelier", "Jours et heures offerts aux visiteurs"],
   expositions: ["Expositions", "Expositions et presse affichées sur le site"],
   contenu: ["Contenu du site", "Textes affichés sur le site public"],
-  medias: ["Médiathèque", "Photos d'œuvres et fichiers"],
 };
 
 /** The editable shape of a work, as strings for the form inputs. */

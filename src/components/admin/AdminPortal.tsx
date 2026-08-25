@@ -13,7 +13,6 @@ import Collections from "./views/Collections";
 import Contenu from "./views/Contenu";
 import Visites from "./views/Visites";
 import Expositions from "./views/Expositions";
-import Medias from "./views/Medias";
 import { isPhoneViewport } from "@/lib/admin-target";
 import { AdminView, Draft, VIEW_TITLES, draftFrom, emptyDraft } from "./types";
 
@@ -563,9 +562,6 @@ export default function AdminPortal() {
             {view === "contenu" && <Contenu onToast={say} />}
             {view === "visites" && <Visites onToast={say} />}
             {view === "expositions" && <Expositions onToast={say} />}
-            {view === "medias" && (
-              <Medias paintings={paintings} onAdd={openAdd} onEdit={openEdit} />
-            )}
           </>
         )}
       </main>
