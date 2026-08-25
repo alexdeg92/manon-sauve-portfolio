@@ -151,8 +151,8 @@ export default function Gestion({
             </span>
             <span className="mt-0.5 block text-[12px] text-m-stone">
               {t(
-                "Ajouter, téléverser et réordonner : sur ordinateur.",
-                "Adding, uploading and reordering: on desktop."
+                "Réordonner et modifier en lot : sur ordinateur.",
+                "Reordering and bulk edits: on desktop."
               )}
             </span>
           </span>

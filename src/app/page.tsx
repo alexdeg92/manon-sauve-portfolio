@@ -29,11 +29,20 @@ export default function Home() {
     setPaintings((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
   }, []);
 
+  // The mobile artist mode can add a work, photo included, from the phone.
+  const handlePaintingAdded = useCallback((created: Painting) => {
+    setPaintings((prev) => [created, ...prev.filter((p) => p.id !== created.id)]);
+  }, []);
+
   return (
     // One provider so the FR/EN choice survives a resize across the breakpoint.
     <SiteProvider>
       <div className="md:hidden">
-        <MobileApp paintings={paintings} onPaintingUpdated={handlePaintingUpdated} />
+        <MobileApp
+          paintings={paintings}
+          onPaintingUpdated={handlePaintingUpdated}
+          onPaintingAdded={handlePaintingAdded}
+        />
       </div>
       <div className="hidden md:block">
         <DesktopSite paintings={paintings} />
