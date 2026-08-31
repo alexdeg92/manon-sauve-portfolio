@@ -2,7 +2,7 @@
 
 import { useSite } from "@/components/site/context";
 
-const EMAIL = "manonsauve1965@gmail.com";
+const EMAIL = "Manonsauve65@hotmail.com";
 const INSTAGRAM = "https://www.instagram.com/manonsauve_art";
 
 export default function Footer() {
